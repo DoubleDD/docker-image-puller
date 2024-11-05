@@ -5,13 +5,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+func main() {
+	r := gin.Default()
+	dip := r.Group("dip")
+	{
+		dip.GET("/api/docker/manifest", getManifestHandler)
+		dip.GET("/api/docker/blob/download", startBlobDownloadHandler)       // 新增
+		dip.GET("/api/docker/blob/progress", getBlobDownloadProgressHandler) // 新增
+	}
+
+	r.Run(":8888") // 启动服务
+}
 
 type Manifest struct {
 	SchemaVersion int    `json:"schemaVersion"`
@@ -324,12 +339,205 @@ func getManifestHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, manifest)
 }
 
-func main() {
-	r := gin.Default()
-	dip := r.Group("dip")
-	{
-		dip.GET("/api/docker/manifest", getManifestHandler)
+// 下载任务的状态结构
+type DownloadTask struct {
+	TaskID   string                 `json:"taskId"`
+	Status   string                 `json:"status"` // pending, downloading, completed, failed
+	Progress map[string]LayerStatus `json:"progress"`
+	Error    string                 `json:"error,omitempty"`
+	mutex    sync.RWMutex
+}
+
+type LayerStatus struct {
+	Size       int64   `json:"size"`
+	Downloaded int64   `json:"downloaded"`
+	Percentage float64 `json:"percentage"`
+	Status     string  `json:"status"`
+}
+
+// 全局任务管理器
+var (
+	downloadTasks = make(map[string]*DownloadTask)
+	tasksMutex    sync.RWMutex
+)
+
+type BlobDownloadRequest struct {
+	Image  string `json:"image"`  // 镜像地址
+	Digest string `json:"digest"` // 层的digest
+	Size   int64  `json:"size"`   // 层的大小
+}
+
+func startBlobDownloadHandler(c *gin.Context) {
+	var req BlobDownloadRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
-	r.Run(":8888") // 启动服务
+	registry, repo, _, err := parseImageAddress(req.Image)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	username := c.Query("username")
+	password := c.Query("password")
+
+	// 创建下载任务
+	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
+	task := &DownloadTask{
+		TaskID:   taskID,
+		Status:   "pending",
+		Progress: make(map[string]LayerStatus),
+	}
+
+	// 初始化这一层的状态
+	task.Progress[req.Digest] = LayerStatus{
+		Size:       req.Size,
+		Status:     "pending",
+		Percentage: 0,
+	}
+
+	// 保存任务
+	tasksMutex.Lock()
+	downloadTasks[taskID] = task
+	tasksMutex.Unlock()
+
+	// 异步执行下载
+	go func() {
+		client := NewDockerRegistryClient(registry, WithAuth(username, password))
+
+		task.mutex.Lock()
+		task.Status = "downloading"
+		task.mutex.Unlock()
+
+		// 下载该层
+		err := client.downloadBlob(repo, req.Digest, task)
+		if err != nil {
+			task.setError(fmt.Sprintf("failed to download layer %s: %v", req.Digest, err))
+			return
+		}
+
+		task.mutex.Lock()
+		task.Status = "completed"
+		task.mutex.Unlock()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"taskId": taskID})
+}
+
+// 查询下载进度的处理函数
+func getBlobDownloadProgressHandler(c *gin.Context) {
+	taskID := c.Query("taskId")
+
+	tasksMutex.RLock()
+	task, exists := downloadTasks[taskID]
+	tasksMutex.RUnlock()
+
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+		return
+	}
+
+	task.mutex.RLock()
+	defer task.mutex.RUnlock()
+
+	c.JSON(http.StatusOK, gin.H{
+		"taskId":   task.TaskID,
+		"status":   task.Status,
+		"progress": task.Progress,
+		"error":    task.Error,
+	})
+}
+
+// DockerRegistryClient 的新方法
+func (client *DockerRegistryClient) downloadBlob(repo, digest string, task *DownloadTask) error {
+	// 获取认证 token
+	token, err := client.getJWT(repo, "")
+	if err != nil {
+		return err
+	}
+
+	// 构建下载 URL
+	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", client.Registry, repo, digest)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download blob: %d", resp.StatusCode)
+	}
+
+	// 创建临时文件保存数据
+	tmpDir := "./tmp"
+	os.MkdirAll(tmpDir, 0755)
+	fileName := filepath.Join(tmpDir, strings.Replace(digest, ":", "_", -1))
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 使用io.TeeReader来同时写入文件并计算下载进度
+	reader := io.TeeReader(resp.Body, &WriteCounter{
+		Total: resp.ContentLength,
+		OnProgress: func(current int64) {
+			task.mutex.Lock()
+			layerStatus := task.Progress[digest]
+			layerStatus.Downloaded = current
+			layerStatus.Percentage = float64(current) / float64(resp.ContentLength) * 100
+			layerStatus.Status = "downloading"
+			task.Progress[digest] = layerStatus
+			task.mutex.Unlock()
+		},
+	})
+
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return err
+	}
+
+	// 更新最终状态
+	task.mutex.Lock()
+	layerStatus := task.Progress[digest]
+	layerStatus.Status = "completed"
+	layerStatus.Downloaded = resp.ContentLength
+	layerStatus.Percentage = 100
+	task.Progress[digest] = layerStatus
+	task.mutex.Unlock()
+
+	return nil
+}
+
+// 用于跟踪写入进度的辅助结构
+type WriteCounter struct {
+	Total      int64
+	OnProgress func(int64)
+}
+
+func (wc *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	if wc.OnProgress != nil {
+		wc.OnProgress(int64(n))
+	}
+	return n, nil
+}
+
+// DownloadTask 的辅助方法
+func (task *DownloadTask) setError(err string) {
+	task.mutex.Lock()
+	task.Status = "failed"
+	task.Error = err
+	task.mutex.Unlock()
 }
