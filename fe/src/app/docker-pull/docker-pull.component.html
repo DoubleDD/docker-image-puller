@@ -1,0 +1,84 @@
+<p>docker-pull works!</p>
+
+  <div class="container mx-auto p-4 max-w-4xl">
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-6">Docker Image Pull</h2>
+        
+        <!-- Image URL Input -->
+        <div class="flex gap-4 mb-6">
+          <input 
+            [(ngModel)]="imageUrl"
+            (keyup.enter)="fetchManifest()"
+            class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter docker image URL"
+            [disabled]="isProcessing"
+          >
+          <button 
+            (click)="fetchManifest()"
+            [disabled]="!imageUrl || isProcessing"
+            class="px-6 py-2 bg-blue-500 rounded hover:bg-blue-600 disabled:bg-gray-400"
+          >
+            <span *ngIf="!isProcessing">Fetch Manifest</span>
+            <span *ngIf="isProcessing" class="flex items-center gap-2">
+              <i class="fas fa-spinner fa-spin"></i>
+              Processing...
+            </span>
+          </button>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="error" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {{ error }}
+        </div>
+
+        <!-- Manifest and Layers -->
+        <div *ngIf="manifest" class="space-y-6">
+          <div class="text-sm">
+            <strong>Schema Version:</strong> {{ manifest.schemaVersion }}
+          </div>
+
+          <!-- Layers List -->
+          <div class="space-y-4">
+            <div *ngFor="let layer of layers" class="border rounded p-4">
+              <div class="flex justify-between items-center mb-2">
+                <code class="text-sm bg-gray-100 px-2 py-1 rounded">
+                  {{ layer.digest | slice:7:19 }}...
+                </code>
+                <span [ngClass]="{ 'text-blue-500': layer.status === 'downloading', 'text-green-500': layer.status === 'completed', 'text-red-500': layer.status === 'error', 'text-yellow-500': layer.status === 'uploading' }">
+                  {{ layer.status }}
+                </span>
+              </div>
+
+              <!-- Download Progress -->
+              <div class="mb-2">
+                <div class="text-xs text-gray-600 mb-1">Download Progress</div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-blue-500 h-2.5 rounded-full transition-all"
+                       [style.width]="layer.downloadProgress + '%'">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload Progress -->
+              <div>
+                <div class="text-xs text-gray-600 mb-1">Upload Progress</div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-green-500 h-2.5 rounded-full transition-all"
+                       [style.width]="layer.uploadProgress + '%'">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pull Button -->
+          <button 
+            (click)="handlePullImage()"
+            [disabled]="isProcessing || layers.length === 0"
+            class="w-full px-6 py-3 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
+          >
+            Pull and Process Image
+          </button>
+        </div>
+      </div>
+    </div>
