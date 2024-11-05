@@ -9,6 +9,20 @@ interface CachedManifest {
   timestamp: number;
 }
 
+interface DownloadProgress {
+  taskId: string;
+  status: string;
+  progress: {
+    [digest: string]: {
+      size: number;
+      downloaded: number;
+      percentage: number;
+      status: string;
+    };
+  };
+  error?: string;
+}
+
 @Injectable({
   providedIn: "root",
 })
@@ -90,47 +104,57 @@ export class DockerService {
     }
   }
 
-  downloadLayer(imageUrl: string, digest: string, size: number): Observable<any> {
-    const payload = {
-      image: imageUrl,
-      digest: digest,
-      size: size
-    };
-
-    return this.http.post<{taskId: string}>('/dip/api/docker/blob/download', payload)
-      .pipe(
-        map(response => {
+  downloadLayer(imageUrl: string, digest: string, size: number): Observable<number> {
+    return new Observable<number>(observer => {
+      // 首先发起下载请求
+      this.http.post<{ taskId: string }>('/dip/api/docker/blob/download', {
+        image: imageUrl,
+        digest: digest,
+        size: size
+      }).subscribe({
+        next: (response) => {
           const taskId = response.taskId;
-          return this.pollDownloadProgress(taskId);
-        })
-      );
-  }
 
-  private pollDownloadProgress(taskId: string): Observable<any> {
-    return new Observable(subscriber => {
-      const poll = () => {
-        this.http.get(`/dip/api/docker/blob/progress?taskId=${taskId}`)
-          .subscribe({
-            next: (response: any) => {
-              subscriber.next(response);
+          // 开始轮询进度
+          const pollInterval = setInterval(() => {
+            this.http.get<DownloadProgress>(`/dip/api/docker/blob/progress?taskId=${taskId}`)
+              .subscribe({
+                next: (progress) => {
+                  if (progress.error) {
+                    observer.error(progress.error);
+                    clearInterval(pollInterval);
+                    return;
+                  }
 
-              if (response.status === 'completed') {
-                subscriber.complete();
-              } else if (response.status === 'failed') {
-                subscriber.error(response.error);
-              } else {
-                setTimeout(poll, 1000);
-              }
-            },
-            error: (error) => subscriber.error(error)
-          });
-      };
+                  const layerProgress = progress.progress[digest];
+                  if (layerProgress) {
+                    observer.next(layerProgress.percentage);
+                  }
 
-      poll();
+                  // 检查是否完成
+                  if (progress.status === 'completed') {
+                    observer.next(100);
+                    observer.complete();
+                    clearInterval(pollInterval);
+                  } else if (progress.status === 'failed') {
+                    observer.error('Download failed');
+                    clearInterval(pollInterval);
+                  }
+                },
+                error: (err) => {
+                  observer.error(err);
+                  clearInterval(pollInterval);
+                }
+              });
+          }, 1000); // 每秒轮询一次
 
-      return () => {
-        // 可以在这里添加取消下载的逻辑
-      };
+          // 清理函数
+          return () => {
+            clearInterval(pollInterval);
+          };
+        },
+        error: (err) => observer.error(err)
+      });
     });
   }
 

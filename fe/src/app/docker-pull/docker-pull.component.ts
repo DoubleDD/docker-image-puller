@@ -107,34 +107,31 @@ export class DockerPullComponent implements OnInit {
       // Update status to downloading
       this.updateLayerStatus(layer.digest, "downloading");
 
-      // Download layer
-      const blob = await this.dockerService
-        .downloadLayer(this.imageUrl,layer.digest,layer.size)
-        .pipe(
-          finalize(() => {
-            if (layer.downloadProgress < 100) {
+      // Download layer and handle progress
+      await new Promise<void>((resolve, reject) => {
+        this.dockerService.downloadLayer(this.imageUrl, layer.digest, layer.size)
+          .subscribe({
+            next: (progress: number) => {
+              // 更新下载进度
+              this.layers = this.layers.map(l =>
+                l.digest === layer.digest
+                  ? { ...l, downloadProgress: progress }
+                  : l
+              );
+            },
+            error: (err) => {
               this.updateLayerStatus(layer.digest, "error");
+              reject(err);
+            },
+            complete: () => {
+              this.updateLayerStatus(layer.digest, "completed");
+              resolve();
             }
-          }),
-        )
-        .toPromise();
-
-      if (!blob) throw new Error("Failed to download layer");
+          });
+      });
 
       // Update status to uploading
       this.updateLayerStatus(layer.digest, "uploading");
-
-      // Upload layer
-      await this.dockerService
-        .uploadLayer(blob, layer.digest)
-        .pipe(
-          finalize(() => {
-            if (layer.uploadProgress < 100) {
-              this.updateLayerStatus(layer.digest, "error");
-            }
-          }),
-        )
-        .toPromise();
 
       // Update status to completed
       this.updateLayerStatus(layer.digest, "completed");
