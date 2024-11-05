@@ -20,6 +20,10 @@ import (
 
 func main() {
 	r := gin.Default()
+
+	// 使用 CORS 中间件
+	r.Use(CORSMiddleware())
+
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/docker/manifest", getManifestHandler)
@@ -29,6 +33,25 @@ func main() {
 	}
 
 	r.Run(":7152") // 启动服务
+}
+
+// 添加 CORS 中间件
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+
+		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }
 
 type Manifest struct {
@@ -545,7 +568,7 @@ func (c *httpClient) newRequest(method, path string, body io.Reader) (*http.Requ
 	return req, nil
 }
 
-// 新增：在 DockerRegistryClient 中添加创建认证客户端的方法
+// 新增：在 DockerRegistryClient 中添���创建认证客户端的方法
 func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*httpClient, error) {
 	token, err := client.getJWT(repo, tag)
 	if err != nil {
@@ -686,16 +709,7 @@ func mergeImageHandler(c *gin.Context) {
 		return
 	}
 
-	// 返回文件下载
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=image_%d.tar", time.Now().UnixNano()))
-	c.Header("Content-Type", "application/x-tar")
-	c.File(outputFile)
-
-	// 清理临时文件
-	// go func() {
-	// 	time.Sleep(5 * time.Second) // 等待文件传输完成
-	// os.Remove(outputFile)
-	// }()
+	c.JSON(http.StatusOK, gin.H{"ok": "Done!"})
 }
 
 // 辅助函数：添加文件到tar
