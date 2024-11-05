@@ -4,6 +4,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { finalize, firstValueFrom } from "rxjs";
 import { DockerService } from "./docker.service";
+import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 
 export interface Layer {
   digest: string;
@@ -30,7 +31,7 @@ export interface Manifest {
 @Component({
   selector: "app-docker-pull",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FileSizePipe],
   templateUrl: "./docker-pull.component.html",
   styleUrl: "./docker-pull.component.css",
 })
@@ -108,7 +109,7 @@ export class DockerPullComponent implements OnInit {
 
       // Download layer
       const blob = await this.dockerService
-        .downloadLayer(layer.digest)
+        .downloadLayer(this.imageUrl,layer.digest,layer.size)
         .pipe(
           finalize(() => {
             if (layer.downloadProgress < 100) {
