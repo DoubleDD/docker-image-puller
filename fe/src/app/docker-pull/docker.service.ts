@@ -30,7 +30,7 @@ export class DockerService {
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时的缓存时间（毫秒）
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getManifest(imageUrl: string): Observable<Manifest> {
     // 尝试从缓存获取
@@ -104,57 +104,52 @@ export class DockerService {
     }
   }
 
-  downloadLayer(imageUrl: string, digest: string, size: number): Observable<number> {
-    return new Observable<number>(observer => {
-      // 首先发起下载请求
-      this.http.post<{ taskId: string }>('/dip/api/docker/blob/download', {
-        image: imageUrl,
-        digest: digest,
-        size: size
-      }).subscribe({
-        next: (response) => {
-          const taskId = response.taskId;
-
-          // 开始轮询进度
-          const pollInterval = setInterval(() => {
-            this.http.get<DownloadProgress>(`/dip/api/docker/blob/progress?taskId=${taskId}`)
-              .subscribe({
-                next: (progress) => {
-                  if (progress.error) {
-                    observer.error(progress.error);
-                    clearInterval(pollInterval);
-                    return;
-                  }
-
-                  const layerProgress = progress.progress[digest];
-                  if (layerProgress) {
-                    observer.next(layerProgress.percentage);
-                  }
-
-                  // 检查是否完成
-                  if (progress.status === 'completed') {
-                    observer.next(100);
-                    observer.complete();
-                    clearInterval(pollInterval);
-                  } else if (progress.status === 'failed') {
-                    observer.error('Download failed');
-                    clearInterval(pollInterval);
-                  }
-                },
-                error: (err) => {
-                  observer.error(err);
-                  clearInterval(pollInterval);
-                }
-              });
-          }, 1000); // 每秒轮询一次
-
-          // 清理函数
-          return () => {
-            clearInterval(pollInterval);
-          };
-        },
-        error: (err) => observer.error(err)
+  downloadLayer(imageUrl: string, digest: string, size: number): Observable<{ p: number, d: number }> {
+    return new Observable<{ p: number, d: number }>(observer => {
+      // 创建SSE连接
+      const eventSource = new EventSource(`/dip/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`, {
+        withCredentials: true
       });
+
+      // 监听任务ID
+      eventSource.addEventListener('taskId', (event) => {
+        console.log('Download task created:', event.data);
+      });
+
+      // 监听任务数据
+      eventSource.addEventListener('data', (event) => {
+        console.log('data:', event.data);
+      });
+
+      // 监听进度更新
+      eventSource.addEventListener('progress', (event) => {
+        const progress = JSON.parse(event.data);
+        if (progress.digest === digest) {
+          observer.next({ p: progress.percentage, d: progress.downloaded });
+        }
+      });
+
+      // 监听完成事件
+      eventSource.addEventListener('complete', (event) => {
+        const result = JSON.parse(event.data);
+        if (result.digest === digest) {
+          observer.next({ p: 100, d: result.size });
+          observer.complete();
+          eventSource.close();
+        }
+      });
+
+      // 监听错误
+      eventSource.addEventListener('error', (event: any) => {
+        const errorMessage = event.data || '下载失败';
+        observer.error(errorMessage);
+        eventSource.close();
+      });
+
+      // 清理函数
+      return () => {
+        eventSource.close();
+      };
     });
   }
 

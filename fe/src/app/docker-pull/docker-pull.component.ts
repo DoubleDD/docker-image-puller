@@ -9,6 +9,7 @@ import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 export interface Layer {
   digest: string;
   size: number;
+  downloaded: number;
   downloadProgress: number;
   uploadProgress: number;
   status: "pending" | "downloading" | "uploading" | "completed" | "error";
@@ -46,9 +47,9 @@ export class DockerPullComponent implements OnInit {
   constructor(
     private dockerService: DockerService,
     private http: HttpClient,
-  ) {}
+  ) { }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   parseImageUrl(url: string): string {
     if (!url.includes("/")) {
@@ -65,10 +66,10 @@ export class DockerPullComponent implements OnInit {
     this.layers = this.layers.map((layer) =>
       layer.digest === digest
         ? {
-            ...layer,
-            [type === "download" ? "downloadProgress" : "uploadProgress"]:
-              progress,
-          }
+          ...layer,
+          [type === "download" ? "downloadProgress" : "uploadProgress"]:
+            progress,
+        }
         : layer,
     );
   }
@@ -89,6 +90,7 @@ export class DockerPullComponent implements OnInit {
         this.layers = this.manifest.layers.map((layer) => ({
           digest: layer.digest,
           size: layer.size,
+          downloaded: 0,
           downloadProgress: 0,
           uploadProgress: 0,
           status: "pending",
@@ -111,11 +113,11 @@ export class DockerPullComponent implements OnInit {
       await new Promise<void>((resolve, reject) => {
         this.dockerService.downloadLayer(this.imageUrl, layer.digest, layer.size)
           .subscribe({
-            next: (progress: number) => {
+            next: (progress: { p: number, d: number }) => {
               // 更新下载进度
               this.layers = this.layers.map(l =>
                 l.digest === layer.digest
-                  ? { ...l, downloadProgress: progress }
+                  ? { ...l, downloadProgress: progress.p, downloaded: progress.d }
                   : l
               );
             },
