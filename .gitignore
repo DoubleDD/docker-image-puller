@@ -42,3 +42,4 @@ testem.log
 Thumbs.db
 be/__debug*
 be/tmp
+fe/.angular
