@@ -22,8 +22,8 @@ func main() {
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/docker/manifest", getManifestHandler)
-		dip.GET("/api/docker/blob/download", startBlobDownloadHandler)       // 新增
-		dip.GET("/api/docker/blob/progress", getBlobDownloadProgressHandler) // 新增
+		dip.GET("/api/docker/blob/download", startBlobDownloadHandler) // 镜像层数据下载接口
+		dip.POST("/api/docker/blob/chunk", uploadBlobChunkHandler)     // 镜像层数据分块上传接口
 	}
 
 	r.Run(":8888") // 启动服务
@@ -206,19 +206,7 @@ func (client *DockerRegistryClient) getJWT(repo, tag string) (string, error) {
 
 // GetManifest 获取镜像的 manifest
 func (client *DockerRegistryClient) GetManifest(repo, tag string) (map[string]interface{}, error) {
-	// 获取 JWT Token
-	token, err := client.getJWT(repo, tag)
-	if err != nil {
-		return nil, err
-	}
-
-	// Step 3: 使用 Token 获取 manifest
-	manifest, err := client.fetchManifest(repo, tag, token)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest, nil
+	return client.fetchManifest(repo, tag)
 }
 
 // 获取 authentication URL
@@ -291,7 +279,7 @@ func (client *DockerRegistryClient) getToken(authURL string) (string, error) {
 }
 
 // 使用 token 获取 manifest
-func (client *DockerRegistryClient) fetchManifest(repo, tag, token string) (map[string]interface{}, error) {
+func (client *DockerRegistryClient) fetchManifest(repo, tag string) (map[string]interface{}, error) {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return nil, err
@@ -349,7 +337,6 @@ type DownloadTask struct {
 	Status   string                 `json:"status"` // pending, downloading, completed, failed
 	Progress map[string]LayerStatus `json:"progress"`
 	Error    string                 `json:"error,omitempty"`
-	mutex    sync.RWMutex
 }
 
 type LayerStatus struct {
@@ -358,12 +345,6 @@ type LayerStatus struct {
 	Percentage float64 `json:"percentage"`
 	Status     string  `json:"status"`
 }
-
-// 全局任务管理器
-var (
-	downloadTasks = make(map[string]*DownloadTask)
-	tasksMutex    sync.RWMutex
-)
 
 type BlobDownloadRequest struct {
 	Image  string `json:"image"`  // 镜像地址
@@ -429,6 +410,10 @@ func (client *DockerRegistryClient) downloadBlobWithSSE(repo, tag, digest string
 		return err
 	}
 
+	// 打印 curl 命令
+	curlCmd := generateCurlCommand(req)
+	fmt.Printf("\nCURL command for replay:\n%s\n\n", curlCmd)
+
 	resp, err := httpClient.client.Do(req)
 	if err != nil {
 		return err
@@ -492,92 +477,34 @@ func (client *DockerRegistryClient) downloadBlobWithSSE(repo, tag, digest string
 	return nil
 }
 
-// 查询下载进度的处理函数
-func getBlobDownloadProgressHandler(c *gin.Context) {
-	taskID := c.Query("taskId")
+// 新增：生成 curl 命令的辅助函数
+func generateCurlCommand(req *http.Request) string {
+	// 基础命令
+	cmd := fmt.Sprintf("curl -X %s", req.Method)
 
-	tasksMutex.RLock()
-	task, exists := downloadTasks[taskID]
-	tasksMutex.RUnlock()
-
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
-		return
+	// 添加所有请求头
+	for key, values := range req.Header {
+		for _, value := range values {
+			cmd += fmt.Sprintf(" \\\n  -H '%s: %s'", key, value)
+		}
 	}
 
-	task.mutex.RLock()
-	defer task.mutex.RUnlock()
-
-	c.JSON(http.StatusOK, gin.H{
-		"taskId":   task.TaskID,
-		"status":   task.Status,
-		"progress": task.Progress,
-		"error":    task.Error,
-	})
-}
-
-// DockerRegistryClient 的新方法
-func (client *DockerRegistryClient) downloadBlob(repo, tag, digest string, task *DownloadTask) error {
-	httpClient, err := client.newAuthenticatedClient(repo, tag)
-	if err != nil {
-		return err
+	// 添加完整 URL
+	fullURL := req.URL.String()
+	if !strings.HasPrefix(fullURL, "http") {
+		if strings.HasPrefix(fullURL, "/") {
+			fullURL = fmt.Sprintf("%s://%s%s", req.URL.Scheme, req.URL.Host, fullURL)
+		} else {
+			fullURL = fmt.Sprintf("%s://%s/%s", req.URL.Scheme, req.URL.Host, fullURL)
+		}
 	}
+	cmd += fmt.Sprintf(" \\\n  '%s'", fullURL)
 
-	req, err := httpClient.newRequest("GET", fmt.Sprintf("/blobs/%s", digest), nil)
-	if err != nil {
-		return err
-	}
+	// 添加一些有用的 curl 选项
+	cmd += " \\\n  -v" // 添加详细输出
+	cmd += " \\\n  -L" // 跟随重定向
 
-	resp, err := httpClient.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download blob: %d", resp.StatusCode)
-	}
-
-	// 创建临时文件保存数据
-	tmpDir := "./tmp"
-	os.MkdirAll(tmpDir, 0755)
-	fileName := filepath.Join(tmpDir, strings.Replace(digest, ":", "_", -1))
-
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// 使用io.TeeReader来同时写入文件并计算下载进度
-	reader := io.TeeReader(resp.Body, &WriteCounter{
-		Total: resp.ContentLength,
-		OnProgress: func(current int64) {
-			task.mutex.Lock()
-			layerStatus := task.Progress[digest]
-			layerStatus.Downloaded = current
-			layerStatus.Percentage = float64(current) / float64(resp.ContentLength) * 100
-			layerStatus.Status = "downloading"
-			task.Progress[digest] = layerStatus
-			task.mutex.Unlock()
-		},
-	})
-
-	_, err = io.Copy(file, reader)
-	if err != nil {
-		return err
-	}
-
-	// 更新最终状态
-	task.mutex.Lock()
-	layerStatus := task.Progress[digest]
-	layerStatus.Status = "completed"
-	layerStatus.Downloaded = resp.ContentLength
-	layerStatus.Percentage = 100
-	task.Progress[digest] = layerStatus
-	task.mutex.Unlock()
-
-	return nil
+	return cmd
 }
 
 // 用于跟踪写入进度的辅助结构
@@ -592,14 +519,6 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 		wc.OnProgress(int64(n))
 	}
 	return n, nil
-}
-
-// DownloadTask 的辅助方法
-func (task *DownloadTask) setError(err string) {
-	task.mutex.Lock()
-	task.Status = "failed"
-	task.Error = err
-	task.mutex.Unlock()
 }
 
 // 新增：HTTP 客户端结构体
@@ -635,4 +554,41 @@ func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*h
 		token:   token,
 		baseURL: fmt.Sprintf("https://%s/v2/%s", client.Registry, repo),
 	}, nil
+}
+
+// 新增：处理分块上传的处理器
+func uploadBlobChunkHandler(c *gin.Context) {
+	digest := c.PostForm("digest")
+	chunkData := c.PostForm("chunk")
+
+	// Base64解码
+	data, err := base64.StdEncoding.DecodeString(chunkData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid base64 data"})
+		return
+	}
+
+	// 确保临时目录存在
+	tmpDir := "./tmp"
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
+		return
+	}
+
+	// 创建或追加到文件
+	fileName := filepath.Join(tmpDir, strings.Replace(digest, ":", "_", -1))
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer file.Close()
+
+	// 写入数据
+	if _, err := file.Write(data); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write data"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
 }
