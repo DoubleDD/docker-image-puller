@@ -1,84 +1,110 @@
-<p>docker-pull works!</p>
-
+<div class="min-h-screen bg-gray-50 py-8">
   <div class="container mx-auto p-4 max-w-4xl">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-2xl font-bold mb-6">Docker Image Pull</h2>
-        
-        <!-- Image URL Input -->
-        <div class="flex gap-4 mb-6">
-          <input 
-            [(ngModel)]="imageUrl"
-            (keyup.enter)="fetchManifest()"
-            class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter docker image URL"
-            [disabled]="isProcessing"
-          >
-          <button 
-            (click)="fetchManifest()"
-            [disabled]="!imageUrl || isProcessing"
-            class="px-6 py-2 bg-blue-500 rounded hover:bg-blue-600 disabled:bg-gray-400"
-          >
-            <span *ngIf="!isProcessing">Fetch Manifest</span>
-            <span *ngIf="isProcessing" class="flex items-center gap-2">
-              <i class="fas fa-spinner fa-spin"></i>
-              Processing...
-            </span>
-          </button>
+    <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-100">
+      <div class="flex items-center gap-3 mb-8">
+        <i class="fab fa-docker text-3xl text-blue-500"></i>
+        <h2 class="text-2xl font-bold text-gray-800">Docker Image Pull</h2>
+      </div>
+
+      <!-- Image URL Input -->
+      <div class="flex gap-4 mb-8">
+        <input
+          [(ngModel)]="imageUrl"
+          (keyup.enter)="fetchManifest()"
+          class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          placeholder="Enter docker image URL (e.g., nginx:latest)"
+          [disabled]="isProcessing"
+        >
+        <button
+          (click)="fetchManifest()"
+          [disabled]="!imageUrl || isProcessing"
+          class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm"
+        >
+          <span *ngIf="!isProcessing" class="flex items-center gap-2">
+            <i class="fas fa-search"></i>
+            Fetch Manifest
+          </span>
+          <span *ngIf="isProcessing" class="flex items-center gap-2">
+            <i class="fas fa-spinner fa-spin"></i>
+            Processing...
+          </span>
+        </button>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error" class="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+        <i class="fas fa-exclamation-circle text-red-500"></i>
+        {{ error }}
+      </div>
+
+      <!-- Manifest and Layers -->
+      <div *ngIf="manifest" class="space-y-8">
+        <div class="flex items-center gap-2 text-sm bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <i class="fas fa-info-circle text-blue-500"></i>
+          <span><strong>Schema Version:</strong> {{ manifest.schemaVersion }}</span>
         </div>
 
-        <!-- Error Message -->
-        <div *ngIf="error" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {{ error }}
-        </div>
-
-        <!-- Manifest and Layers -->
-        <div *ngIf="manifest" class="space-y-6">
-          <div class="text-sm">
-            <strong>Schema Version:</strong> {{ manifest.schemaVersion }}
-          </div>
-
-          <!-- Layers List -->
-          <div class="space-y-4">
-            <div *ngFor="let layer of layers" class="border rounded p-4">
-              <div class="flex justify-between items-center mb-2">
-                <code class="text-sm bg-gray-100 px-2 py-1 rounded">
+        <!-- Layers List -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-700 mb-4">Image Layers</h3>
+          <div *ngFor="let layer of layers"
+               class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow duration-200">
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-layer-group text-gray-400"></i>
+                <code class="text-sm bg-gray-50 px-3 py-1.5 rounded-md font-mono">
                   {{ layer.digest | slice:7:19 }}...
                 </code>
-                <span [ngClass]="{ 'text-blue-500': layer.status === 'downloading', 'text-green-500': layer.status === 'completed', 'text-red-500': layer.status === 'error', 'text-yellow-500': layer.status === 'uploading' }">
-                  {{ layer.status }}
-                </span>
               </div>
+              <span class="px-3 py-1 rounded-full text-sm font-medium"
+                    [ngClass]="{
+                      'bg-blue-100 text-blue-700': layer.status === 'downloading',
+                      'bg-green-100 text-green-700': layer.status === 'completed',
+                      'bg-red-100 text-red-700': layer.status === 'error',
+                      'bg-yellow-100 text-yellow-700': layer.status === 'uploading'
+                    }">
+                {{ layer.status }}
+              </span>
+            </div>
 
-              <!-- Download Progress -->
-              <div class="mb-2">
-                <div class="text-xs text-gray-600 mb-1">Download Progress</div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                  <div class="bg-blue-500 h-2.5 rounded-full transition-all"
-                       [style.width]="layer.downloadProgress + '%'">
-                  </div>
+            <!-- Download Progress -->
+            <div class="mb-4">
+              <div class="flex justify-between text-xs text-gray-600 mb-2">
+                <span>Download Progress</span>
+                <span>{{ layer.downloadProgress }}%</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                     [style.width]="layer.downloadProgress + '%'">
                 </div>
               </div>
+            </div>
 
-              <!-- Upload Progress -->
-              <div>
-                <div class="text-xs text-gray-600 mb-1">Upload Progress</div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                  <div class="bg-green-500 h-2.5 rounded-full transition-all"
-                       [style.width]="layer.uploadProgress + '%'">
-                  </div>
+            <!-- Upload Progress -->
+            <div>
+              <div class="flex justify-between text-xs text-gray-600 mb-2">
+                <span>Upload Progress</span>
+                <span>{{ layer.uploadProgress }}%</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full transition-all duration-300"
+                     [style.width]="layer.uploadProgress + '%'">
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- Pull Button -->
-          <button 
-            (click)="handlePullImage()"
-            [disabled]="isProcessing || layers.length === 0"
-            class="w-full px-6 py-3 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-          >
-            Pull and Process Image
-          </button>
         </div>
+
+        <!-- Pull Button -->
+        <button
+          (click)="handlePullImage()"
+          [disabled]="isProcessing || layers.length === 0"
+          class="w-full px-6 py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 font-medium"
+        >
+          <i class="fas fa-download"></i>
+          Pull and Process Image
+        </button>
       </div>
     </div>
+  </div>
+</div>
