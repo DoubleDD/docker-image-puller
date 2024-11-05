@@ -1,8 +1,7 @@
 import { CommonModule } from "@angular/common";
-import { HttpClient } from "@angular/common/http";
-import { Component, OnInit } from "@angular/core";
+import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { finalize, firstValueFrom } from "rxjs";
+import { firstValueFrom } from "rxjs";
 import { DockerService } from "./docker.service";
 import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 
@@ -36,44 +35,15 @@ export interface Manifest {
   templateUrl: "./docker-pull.component.html",
   styleUrl: "./docker-pull.component.css",
 })
-export class DockerPullComponent implements OnInit {
-  imageUrl =
-    "registry.cn-zhangjiakou.aliyuncs.com/yunli_mid_platform/resource:dtwin-etl-shg-be-1.0.0-xc-arm64";
+export class DockerPullComponent {
+  imageUrl = "registry.cn-zhangjiakou.aliyuncs.com/yunli_mid_platform/resource:dtwin-etl-shg-be-1.0.0-xc-arm64";
   manifest: Manifest | null = null;
   layers: Layer[] = [];
   isProcessing = false;
   error = "";
   configContent: any = null;
 
-  constructor(
-    private dockerService: DockerService,
-    private http: HttpClient,
-  ) { }
-
-  ngOnInit() { }
-
-  parseImageUrl(url: string): string {
-    if (!url.includes("/")) {
-      return `registry.hub.docker.com/library/${url}`;
-    }
-    return url;
-  }
-
-  updateLayerProgress(
-    digest: string,
-    type: "download" | "upload",
-    progress: number,
-  ) {
-    this.layers = this.layers.map((layer) =>
-      layer.digest === digest
-        ? {
-          ...layer,
-          [type === "download" ? "downloadProgress" : "uploadProgress"]:
-            progress,
-        }
-        : layer,
-    );
-  }
+  constructor(private dockerService: DockerService) {}
 
   async fetchManifest() {
     try {
@@ -82,17 +52,13 @@ export class DockerPullComponent implements OnInit {
       this.manifest = null;
       this.configContent = null;
 
-      // 获取manifest
       this.manifest = await firstValueFrom(this.dockerService.getManifest(this.imageUrl));
-
-      // 下载配置文件
       this.configContent = await firstValueFrom(this.dockerService.downloadConfig(
         this.imageUrl,
         this.manifest.config.digest,
         this.manifest.config.size
       ));
 
-      // 处理层信息
       this.layers = this.manifest.layers.map(layer => ({
         ...layer,
         status: 'pending',
@@ -109,15 +75,12 @@ export class DockerPullComponent implements OnInit {
 
   private async processLayer(layer: Layer): Promise<void> {
     try {
-      // Update status to downloading
       this.updateLayerStatus(layer.digest, "downloading");
 
-      // Download layer and handle progress
       await new Promise<void>((resolve, reject) => {
         this.dockerService.downloadLayer(this.imageUrl, layer.digest, layer.size)
           .subscribe({
             next: (progress: { p: number, u: number, d: number }) => {
-              // 更新下载进度
               this.layers = this.layers.map(l =>
                 l.digest === layer.digest
                   ? {
@@ -139,12 +102,6 @@ export class DockerPullComponent implements OnInit {
             }
           });
       });
-
-      // Update status to uploading
-      this.updateLayerStatus(layer.digest, "uploading");
-
-      // Update status to completed
-      this.updateLayerStatus(layer.digest, "completed");
     } catch (err) {
       console.error(`Error processing layer ${layer.digest}:`, err);
       this.updateLayerStatus(layer.digest, "error");
@@ -165,10 +122,7 @@ export class DockerPullComponent implements OnInit {
     this.error = "";
 
     try {
-      // Process all layers in parallel
       await Promise.all(this.layers.map((layer) => this.processLayer(layer)));
-
-      // Notify server to merge layers
       await this.dockerService
         .mergeImage(
           this.imageUrl,
@@ -184,11 +138,9 @@ export class DockerPullComponent implements OnInit {
     }
   }
 
-  // 辅助方法：获取暴露的端口列表
   getExposedPorts(): string[] {
-    if (!this.configContent?.config?.ExposedPorts) {
-      return [];
-    }
-    return Object.keys(this.configContent.config.ExposedPorts);
+    return this.configContent?.config?.ExposedPorts
+      ? Object.keys(this.configContent.config.ExposedPorts)
+      : [];
   }
 }

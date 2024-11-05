@@ -1,26 +1,11 @@
 import { HttpClient, HttpEvent, HttpEventType } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable, of, tap } from "rxjs";
-import { map } from "rxjs/operators";
 import { Manifest } from "./docker-pull.component";
 
 interface CachedManifest {
   manifest: Manifest;
   timestamp: number;
-}
-
-interface DownloadProgress {
-  taskId: string;
-  status: string;
-  progress: {
-    [digest: string]: {
-      size: number;
-      downloaded: number;
-      percentage: number;
-      status: string;
-    };
-  };
-  error?: string;
 }
 
 @Injectable({
