@@ -104,8 +104,10 @@ export class DockerService {
     }
   }
 
-  downloadLayer(imageUrl: string, digest: string, size: number): Observable<{ p: number, d: number }> {
-    return new Observable<{ p: number, d: number }>(observer => {
+  downloadLayer(imageUrl: string, digest: string, size: number): Observable<{ p: number, u: number, d: number }> {
+    return new Observable<{ p: number, u: number, d: number }>(observer => {
+      let totalUploaded = 0;
+
       // 创建SSE连接
       const eventSource = new EventSource(`/dip/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`, {
         withCredentials: true
@@ -117,15 +119,41 @@ export class DockerService {
       });
 
       // 监听任务数据
-      eventSource.addEventListener('data', (event) => {
-        console.log('data:', event.data);
+      eventSource.addEventListener('data', async (event) => {
+        try {
+          // 创建 FormData 对象
+          const formData = new FormData();
+          formData.append('digest', digest);
+          formData.append('chunk', event.data); // event.data 已经是 base64 编码的数据
+          // 计算当前块的大小（解码base64后的大小）
+          const chunkSize = Math.ceil(event.data.length * 3 / 4); // 估算base64解码后的大小
+
+          console.log("上传层分块，分块大小", chunkSize);
+
+          // 上传数据块
+          await this.http.post('/dip/api/docker/blob/chunk', formData).toPromise();
+
+          // 更新已上传的总大小
+          totalUploaded += chunkSize;
+
+          // 计算上传进度百分比
+          const uploadPercentage = (totalUploaded / size) * 100;
+
+          // 发送最新的下载和上传进度
+          observer.next({ p: -1, u: uploadPercentage, d: -1 });
+
+        } catch (error) {
+          console.error('Failed to upload chunk:', error);
+          observer.error('上传数据块失败');
+          eventSource.close();
+        }
       });
 
       // 监听进度更新
       eventSource.addEventListener('progress', (event) => {
         const progress = JSON.parse(event.data);
         if (progress.digest === digest) {
-          observer.next({ p: progress.percentage, d: progress.downloaded });
+          observer.next({ p: progress.percentage, u: -1, d: progress.downloaded });
         }
       });
 
@@ -133,7 +161,7 @@ export class DockerService {
       eventSource.addEventListener('complete', (event) => {
         const result = JSON.parse(event.data);
         if (result.digest === digest) {
-          observer.next({ p: 100, d: result.size });
+          observer.next({ p: 100, u: 100, d: result.size });
           observer.complete();
           eventSource.close();
         }

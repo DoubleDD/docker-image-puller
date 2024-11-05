@@ -113,11 +113,16 @@ export class DockerPullComponent implements OnInit {
       await new Promise<void>((resolve, reject) => {
         this.dockerService.downloadLayer(this.imageUrl, layer.digest, layer.size)
           .subscribe({
-            next: (progress: { p: number, d: number }) => {
+            next: (progress: { p: number, u: number, d: number }) => {
               // 更新下载进度
               this.layers = this.layers.map(l =>
                 l.digest === layer.digest
-                  ? { ...l, downloadProgress: progress.p, downloaded: progress.d }
+                  ? {
+                    ...l,
+                    downloadProgress: progress.p > 0 ? progress.p : l.downloadProgress,
+                    uploadProgress: progress.u > 0 ? progress.u : l.uploadProgress,
+                    downloaded: progress.d > 0 ? progress.d : l.downloaded
+                  }
                   : l
               );
             },
