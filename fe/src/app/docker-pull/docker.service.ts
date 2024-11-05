@@ -181,30 +181,61 @@ export class DockerService {
     });
   }
 
-  uploadLayer(blob: Blob, digest: string): Observable<any> {
-    const formData = new FormData();
-    formData.append("layer", blob);
-    formData.append("digest", digest);
 
-    return this.http
-      .post("/dip/api/docker/upload", formData, {
-        reportProgress: true,
-        observe: "events",
-      })
-      .pipe(
-        map((event: HttpEvent<any>) => {
-          if (event.type === HttpEventType.UploadProgress && event.total) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            // You'll need to implement a way to update the progress in the component
-          }
-          if (event.type === HttpEventType.Response) {
-            return event.body;
-          }
-        }),
-      );
+
+  mergeImage(image: string, manifest: Manifest, layers: string[]): Observable<any> {
+    return this.http.post("/dip/api/docker/merge", { image, manifest, layers });
   }
 
-  mergeImage(manifest: Manifest, layers: string[]): Observable<any> {
-    return this.http.post("/dip/api/docker/merge", { manifest, layers });
+  // 添加配置文件下载方法
+  downloadConfig(imageUrl: string, digest: string, size: number): Observable<any> {
+    return new Observable(observer => {
+      const eventSource = new EventSource(
+        `/dip/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`,
+        { withCredentials: true }
+      );
+
+      let configData = '';
+
+      eventSource.addEventListener('data', async (event) => {
+        configData += event.data;
+        try {
+          // 创建 FormData 对象
+          const formData = new FormData();
+          formData.append('digest', digest);
+          formData.append('chunk', event.data); // event.data 已经是 base64 编码的数据
+
+          // 上传数据块
+          await this.http.post('/dip/api/docker/blob/chunk', formData).toPromise();
+
+        } catch (error) {
+          console.error('Failed to upload chunk:', error);
+          observer.error('上传config数据块失败');
+          eventSource.close();
+        }
+      });
+
+      eventSource.addEventListener('complete', () => {
+        try {
+          // base64解码并解析JSON
+          const decodedData = atob(configData);
+          const config = JSON.parse(decodedData);
+          observer.next(config);
+          observer.complete();
+        } catch (error) {
+          observer.error('Failed to parse config data');
+        }
+        eventSource.close();
+      });
+
+      eventSource.addEventListener('error', (event: any) => {
+        observer.error(event.data || 'Failed to download config');
+        eventSource.close();
+      });
+
+      return () => {
+        eventSource.close();
+      };
+    });
   }
 }

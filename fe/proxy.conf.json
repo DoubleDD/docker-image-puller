@@ -1,6 +1,6 @@
 {
   "/dip/": {
-    "target": "http://localhost:8888",
+    "target": "http://localhost:7152",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

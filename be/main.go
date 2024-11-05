@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/tar"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -24,9 +25,10 @@ func main() {
 		dip.GET("/api/docker/manifest", getManifestHandler)
 		dip.GET("/api/docker/blob/download", startBlobDownloadHandler) // 镜像层数据下载接口
 		dip.POST("/api/docker/blob/chunk", uploadBlobChunkHandler)     // 镜像层数据分块上传接口
+		dip.POST("/api/docker/merge", mergeImageHandler)               // 新增合并接口
 	}
 
-	r.Run(":8888") // 启动服务
+	r.Run(":7152") // 启动服务
 }
 
 type Manifest struct {
@@ -46,6 +48,7 @@ type Manifest struct {
 type MergeRequest struct {
 	Manifest Manifest `json:"manifest"`
 	Layers   []string `json:"layers"`
+	Image    string   `json:"image"`
 }
 
 // 新增：获取registry认证token的响应结构
@@ -591,4 +594,126 @@ func uploadBlobChunkHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+func mergeImageHandler(c *gin.Context) {
+	var req MergeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// 创建临时目录用于存放最终的镜像文件
+	tmpDir := "./tmp"
+	outputFile := filepath.Join(tmpDir, fmt.Sprintf("image_%d.tar", time.Now().UnixNano()))
+
+	// 创建tar文件
+	tf, err := os.Create(outputFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create output file"})
+		return
+	}
+	defer tf.Close()
+
+	tw := tar.NewWriter(tf)
+	defer tw.Close()
+
+	// 写入manifest.json
+	manifestList := []map[string]interface{}{
+		{
+			"Config":   req.Manifest.Config.Digest[7:] + ".json", // 移除 "sha256:" 前缀
+			"RepoTags": []string{req.Image},
+			"Layers":   make([]string, len(req.Manifest.Layers)),
+		},
+	}
+
+	// 准备层文件名列表
+	for i, layer := range req.Manifest.Layers {
+		manifestList[0]["Layers"].([]string)[i] = layer.Digest[7:] + "/layer.tar"
+	}
+
+	// 写入 manifest.json
+	manifestJson, err := json.Marshal(manifestList)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal manifest"})
+		return
+	}
+
+	err = addFileToTar(tw, "manifest.json", manifestJson)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add manifest to tar"})
+		return
+	}
+
+	// 写入配置文件
+	configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
+	configData, err := os.ReadFile(configFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read config file"})
+		return
+	}
+
+	err = addFileToTar(tw, req.Manifest.Config.Digest[7:]+".json", configData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add config to tar"})
+		return
+	}
+
+	// 处理每一层
+	for _, layer := range req.Manifest.Layers {
+		layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
+
+		// 创建层目录
+		layerDir := layer.Digest[7:]
+
+		// 添加层数据
+		layerData, err := os.ReadFile(layerFile)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to read layer %s", layer.Digest)})
+			return
+		}
+
+		err = addFileToTar(tw, filepath.Join(layerDir, "layer.tar"), layerData)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to add layer %s to tar", layer.Digest)})
+			return
+		}
+	}
+
+	// 完成tar文件写入
+	if err := tw.Close(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize tar file"})
+		return
+	}
+
+	// 返回文件下载
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=image_%d.tar", time.Now().UnixNano()))
+	c.Header("Content-Type", "application/x-tar")
+	c.File(outputFile)
+
+	// 清理临时文件
+	// go func() {
+	// 	time.Sleep(5 * time.Second) // 等待文件传输完成
+	// os.Remove(outputFile)
+	// }()
+}
+
+// 辅助函数：添加文件到tar
+func addFileToTar(tw *tar.Writer, name string, data []byte) error {
+	header := &tar.Header{
+		Name:    name,
+		Mode:    0644,
+		Size:    int64(len(data)),
+		ModTime: time.Now(),
+	}
+
+	if err := tw.WriteHeader(header); err != nil {
+		return err
+	}
+
+	if _, err := tw.Write(data); err != nil {
+		return err
+	}
+
+	return nil
 }

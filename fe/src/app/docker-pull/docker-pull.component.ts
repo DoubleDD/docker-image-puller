@@ -43,6 +43,7 @@ export class DockerPullComponent implements OnInit {
   layers: Layer[] = [];
   isProcessing = false;
   error = "";
+  configContent: any = null;
 
   constructor(
     private dockerService: DockerService,
@@ -75,30 +76,32 @@ export class DockerPullComponent implements OnInit {
   }
 
   async fetchManifest() {
-    if (!this.imageUrl) return;
-
     try {
       this.isProcessing = true;
-      this.error = "";
-      const parsedUrl = this.parseImageUrl(this.imageUrl);
+      this.error = '';
+      this.manifest = null;
+      this.configContent = null;
 
-      this.manifest = await firstValueFrom(
-        this.dockerService.getManifest(parsedUrl),
-      );
+      // 获取manifest
+      this.manifest = await firstValueFrom(this.dockerService.getManifest(this.imageUrl));
 
-      if (this.manifest) {
-        this.layers = this.manifest.layers.map((layer) => ({
-          digest: layer.digest,
-          size: layer.size,
-          downloaded: 0,
-          downloadProgress: 0,
-          uploadProgress: 0,
-          status: "pending",
-        }));
-      }
-    } catch (err) {
-      this.error = "Failed to fetch manifest";
-      console.error(err);
+      // 下载配置文件
+      this.configContent = await firstValueFrom(this.dockerService.downloadConfig(
+        this.imageUrl,
+        this.manifest.config.digest,
+        this.manifest.config.size
+      ));
+
+      // 处理层信息
+      this.layers = this.manifest.layers.map(layer => ({
+        ...layer,
+        status: 'pending',
+        downloadProgress: 0,
+        uploadProgress: 0,
+        downloaded: 0
+      }));
+    } catch (error: any) {
+      this.error = error.message || 'Failed to fetch manifest';
     } finally {
       this.isProcessing = false;
     }
@@ -168,6 +171,7 @@ export class DockerPullComponent implements OnInit {
       // Notify server to merge layers
       await this.dockerService
         .mergeImage(
+          this.imageUrl,
           this.manifest,
           this.layers.map((l) => l.digest),
         )
@@ -178,5 +182,13 @@ export class DockerPullComponent implements OnInit {
     } finally {
       this.isProcessing = false;
     }
+  }
+
+  // 辅助方法：获取暴露的端口列表
+  getExposedPorts(): string[] {
+    if (!this.configContent?.config?.ExposedPorts) {
+      return [];
+    }
+    return Object.keys(this.configContent.config.ExposedPorts);
   }
 }

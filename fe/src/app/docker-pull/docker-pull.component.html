@@ -39,12 +39,72 @@
 
       <!-- Manifest and Layers -->
       <div *ngIf="manifest" class="space-y-8">
-        <div class="flex items-center gap-2 text-sm bg-blue-50 p-4 rounded-lg border border-blue-100">
-          <i class="fas fa-info-circle text-blue-500"></i>
-          <span><strong>Schema Version:</strong> {{ manifest.schemaVersion }}</span>
+        <!-- Config Info -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-700 mb-4">Image Configuration</h3>
+          <div class="border border-gray-200 rounded-lg p-5">
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-cog text-gray-400"></i>
+                <code class="text-sm bg-gray-50 px-3 py-1.5 rounded-md font-mono">
+                  {{ manifest.config.digest | slice:7:19 }}...
+                </code>
+              </div>
+              <span class="text-sm text-gray-500">
+                {{ manifest.config.size | fileSize }}
+              </span>
+            </div>
+
+            <!-- Config Content -->
+            <div *ngIf="configContent" class="mt-4 space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">Architecture</p>
+                    <p class="text-sm text-gray-800">{{ configContent.architecture }}</p>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">OS</p>
+                    <p class="text-sm text-gray-800">{{ configContent.os }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Environment Variables -->
+              <div *ngIf="configContent.config?.Env?.length" class="space-y-2">
+                <p class="text-sm font-medium text-gray-600">Environment Variables</p>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <div *ngFor="let env of configContent.config.Env" class="text-sm text-gray-800 font-mono">
+                    {{ env }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Exposed Ports -->
+              <div *ngIf="configContent.config?.ExposedPorts" class="space-y-2">
+                <p class="text-sm font-medium text-gray-600">Exposed Ports</p>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <div class="grid grid-cols-3 gap-2">
+                    <div *ngFor="let port of getExposedPorts()"
+                         class="text-sm text-gray-800 bg-blue-50 px-3 py-1 rounded-md">
+                      {{ port }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Working Directory -->
+              <div *ngIf="configContent.config?.WorkingDir" class="space-y-2">
+                <p class="text-sm font-medium text-gray-600">Working Directory</p>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <p class="text-sm text-gray-800 font-mono">{{ configContent.config.WorkingDir }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Layers List -->
+        <!-- Existing Layers List -->
         <div class="space-y-4">
           <h3 class="text-lg font-semibold text-gray-700 mb-4">Image Layers</h3>
           <div *ngFor="let layer of layers"
