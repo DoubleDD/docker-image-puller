@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +22,7 @@ func main() {
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/docker/manifest", getManifestHandler)
-		dip.POST("/api/docker/blob/download", startBlobDownloadHandler)      // 新增
+		dip.GET("/api/docker/blob/download", startBlobDownloadHandler)       // 新增
 		dip.GET("/api/docker/blob/progress", getBlobDownloadProgressHandler) // 新增
 	}
 
@@ -371,13 +372,19 @@ type BlobDownloadRequest struct {
 }
 
 func startBlobDownloadHandler(c *gin.Context) {
-	var req BlobDownloadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	image := c.Query("image")
+	digest := c.Query("digest")
+	// 获取查询参数 "size" 并尝试转换为 int64
+	sizeStr := c.Query("size")
+	// 将字符串转换为 int64，设置基数为 10，位数为 64
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		// 处理转换错误，例如返回400响应
+		c.JSON(400, gin.H{"error": "Invalid size parameter"})
 		return
 	}
 
-	registry, repo, tag, err := parseImageAddress(req.Image)
+	registry, repo, tag, err := parseImageAddress(image)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -388,45 +395,101 @@ func startBlobDownloadHandler(c *gin.Context) {
 
 	// 创建下载任务
 	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
-	task := &DownloadTask{
-		TaskID:   taskID,
-		Status:   "pending",
-		Progress: make(map[string]LayerStatus),
+
+	// 设置SSE响应头
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Transfer-Encoding", "chunked")
+
+	// 发送任务ID
+	c.SSEvent("taskId", taskID)
+	c.Writer.Flush()
+
+	client := NewDockerRegistryClient(registry, WithAuth(username, password))
+
+	// 开始下载
+	err = client.downloadBlobWithSSE(repo, tag, digest, size, c)
+	if err != nil {
+		c.SSEvent("error", err.Error())
+		c.Writer.Flush()
+		return
+	}
+}
+
+// 修改 DockerRegistryClient 的下载方法以支持SSE
+func (client *DockerRegistryClient) downloadBlobWithSSE(repo, tag, digest string, size int64, c *gin.Context) error {
+	httpClient, err := client.newAuthenticatedClient(repo, tag)
+	if err != nil {
+		return err
 	}
 
-	// 初始化这一层的状态
-	task.Progress[req.Digest] = LayerStatus{
-		Size:       req.Size,
-		Status:     "pending",
-		Percentage: 0,
+	req, err := httpClient.newRequest("GET", fmt.Sprintf("/blobs/%s", digest), nil)
+	if err != nil {
+		return err
 	}
 
-	// 保存任务
-	tasksMutex.Lock()
-	downloadTasks[taskID] = task
-	tasksMutex.Unlock()
+	resp, err := httpClient.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
-	// 异步执行下载
-	go func() {
-		client := NewDockerRegistryClient(registry, WithAuth(username, password))
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download blob: %d", resp.StatusCode)
+	}
 
-		task.mutex.Lock()
-		task.Status = "downloading"
-		task.mutex.Unlock()
+	// 使用 sendfile 进行零拷贝传输
+	if f, ok := resp.Body.(*os.File); ok {
+		// 这行代码使用 gin 框架的 DataFromReader 方法来实现零拷贝传输
+		// - http.StatusOK: 设置 HTTP 响应状态码为 200
+		// - resp.ContentLength: 设置响应内容的长度
+		// - resp.Header.Get("Content-Type"): 设置响应的 Content-Type 头部
+		// - f: 直接从文件对象读取数据并写入响应
+		// - nil: 不使用额外的 headers
+		c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), f, nil)
+	} else {
+		// 使用缓冲读取并报告进度
+		buffer := make([]byte, 32*1024) // 32KB 缓冲区
+		var downloaded int64
 
-		// 下载该层
-		err := client.downloadBlob(repo, tag, req.Digest, task)
-		if err != nil {
-			task.setError(fmt.Sprintf("failed to download layer %s: %v", req.Digest, err))
-			return
+		for {
+			n, err := resp.Body.Read(buffer)
+			if n > 0 {
+				downloaded += int64(n)
+				percentage := float64(downloaded) / float64(size) * 100
+
+				// 发送进度事件
+				c.SSEvent("progress", gin.H{
+					"digest":     digest,
+					"downloaded": downloaded,
+					"total":      size,
+					"percentage": percentage,
+				})
+				c.Writer.Flush()
+
+				// 发送数据块
+				c.SSEvent("data", base64.StdEncoding.EncodeToString(buffer[:n]))
+				c.Writer.Flush()
+			}
+
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
 		}
+	}
 
-		task.mutex.Lock()
-		task.Status = "completed"
-		task.mutex.Unlock()
-	}()
+	// 发送完成事件
+	c.SSEvent("complete", gin.H{
+		"digest": digest,
+		"size":   size,
+	})
+	c.Writer.Flush()
 
-	c.JSON(http.StatusOK, gin.H{"taskId": taskID})
+	return nil
 }
 
 // 查询下载进度的处理函数
