@@ -21,7 +21,7 @@ func main() {
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/docker/manifest", getManifestHandler)
-		dip.GET("/api/docker/blob/download", startBlobDownloadHandler)       // 新增
+		dip.POST("/api/docker/blob/download", startBlobDownloadHandler)      // 新增
 		dip.GET("/api/docker/blob/progress", getBlobDownloadProgressHandler) // 新增
 	}
 
@@ -291,15 +291,18 @@ func (client *DockerRegistryClient) getToken(authURL string) (string, error) {
 
 // 使用 token 获取 manifest
 func (client *DockerRegistryClient) fetchManifest(repo, tag, token string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("https://%s/v2/%s/manifests/%s", client.Registry, repo, tag)
-	req, err := http.NewRequest("GET", url, nil)
+	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+
+	req, err := httpClient.newRequest("GET", fmt.Sprintf("/manifests/%s", tag), nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -374,7 +377,7 @@ func startBlobDownloadHandler(c *gin.Context) {
 		return
 	}
 
-	registry, repo, _, err := parseImageAddress(req.Image)
+	registry, repo, tag, err := parseImageAddress(req.Image)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -412,7 +415,7 @@ func startBlobDownloadHandler(c *gin.Context) {
 		task.mutex.Unlock()
 
 		// 下载该层
-		err := client.downloadBlob(repo, req.Digest, task)
+		err := client.downloadBlob(repo, tag, req.Digest, task)
 		if err != nil {
 			task.setError(fmt.Sprintf("failed to download layer %s: %v", req.Digest, err))
 			return
@@ -451,24 +454,18 @@ func getBlobDownloadProgressHandler(c *gin.Context) {
 }
 
 // DockerRegistryClient 的新方法
-func (client *DockerRegistryClient) downloadBlob(repo, digest string, task *DownloadTask) error {
-	// 获取认证 token
-	token, err := client.getJWT(repo, "")
+func (client *DockerRegistryClient) downloadBlob(repo, tag, digest string, task *DownloadTask) error {
+	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return err
 	}
 
-	// 构建下载 URL
-	url := fmt.Sprintf("https://%s/v2/%s/blobs/%s", client.Registry, repo, digest)
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := httpClient.newRequest("GET", fmt.Sprintf("/blobs/%s", digest), nil)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -540,4 +537,39 @@ func (task *DownloadTask) setError(err string) {
 	task.Status = "failed"
 	task.Error = err
 	task.mutex.Unlock()
+}
+
+// 新增：HTTP 客户端结构体
+type httpClient struct {
+	client  *http.Client
+	token   string
+	baseURL string
+}
+
+// 新增：创建带有认证的请求
+func (c *httpClient) newRequest(method, path string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, c.baseURL+path, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	return req, nil
+}
+
+// 新增：在 DockerRegistryClient 中添加创建认证客户端的方法
+func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*httpClient, error) {
+	token, err := client.getJWT(repo, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return &httpClient{
+		client:  http.DefaultClient,
+		token:   token,
+		baseURL: fmt.Sprintf("https://%s/v2/%s", client.Registry, repo),
+	}, nil
 }
