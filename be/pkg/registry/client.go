@@ -129,6 +129,10 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 		for {
 			n, err := resp.Body.Read(buffer)
 			if n > 0 {
+				// 发送数据块
+				c.SSEvent("data", base64.StdEncoding.EncodeToString(buffer[:n]))
+				c.Writer.Flush()
+
 				downloaded += int64(n)
 				percentage := float64(downloaded) / float64(size) * 100
 
@@ -139,10 +143,6 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 					"total":      size,
 					"percentage": percentage,
 				})
-				c.Writer.Flush()
-
-				// 发送数据块
-				c.SSEvent("data", base64.StdEncoding.EncodeToString(buffer[:n]))
 				c.Writer.Flush()
 			}
 
