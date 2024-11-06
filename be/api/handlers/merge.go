@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"docker-image-handler/internal/models"
 	"docker-image-handler/pkg/docker"
+	"docker-image-handler/pkg/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,7 +24,7 @@ func MergeImage(c *gin.Context) {
 	}
 
 	// 创建临时目录用于存放最终的镜像文件
-	tmpDir := "./tmp"
+	tmpDir := utils.UserHomeTmpDir()
 	outputFile := filepath.Join(tmpDir, fmt.Sprintf("image_%d.tar", time.Now().UnixNano()))
 
 	// 创建tar文件
