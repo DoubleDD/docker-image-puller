@@ -1,14 +1,27 @@
 import { HttpClient, HttpEvent, HttpEventType } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import { Observable, of, tap } from "rxjs";
+import { firstValueFrom, Observable, of, tap } from "rxjs";
 import { Manifest } from "./docker-pull.component";
 
-const proxy_server = 'http://localhost:7152'
+
+
 
 interface CachedManifest {
   manifest: Manifest;
   timestamp: number;
 }
+
+
+// 添加上传策略枚举
+export enum UploadStrategy {
+  NONE = 'none',  // 不上传
+  IMMEDIATE = 'immediate',  // 在data事件中立即上传
+  COMPLETE = 'complete'     // 在complete事件中一次性上传
+}
+
+
+const proxy_server = 'http://localhost:7152'
+
 
 @Injectable({
   providedIn: "root",
@@ -91,14 +104,19 @@ export class DockerService {
     }
   }
 
+
+
   private createBlobDownloadStream(
     imageUrl: string,
     digest: string,
     size: number,
-    onData?: (data: string) => void
+    onData?: (data: string) => void,
+    uploadStrategy: UploadStrategy = UploadStrategy.IMMEDIATE  // 默认使用即时上传
   ): Observable<{ p: number, u: number, d: number }> {
     return new Observable(observer => {
       let totalUploaded = 0;
+      let chunkBuffer: string[] = [];
+      let bufferSize = 0;
 
       const eventSource = new EventSource(
         `${proxy_server}/dip/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`,
@@ -109,29 +127,63 @@ export class DockerService {
         console.log('Download task created:', event.data);
       });
 
-      eventSource.addEventListener('data', async (event) => {
+      eventSource.addEventListener('data', (event) => {
         try {
-          // 如果有自定义数据处理函数，先处理数据
           if (onData) {
+            console.log(event.data);
+
             onData(event.data);
           }
 
-          const formData = new FormData();
-          formData.append('digest', digest);
-          formData.append('chunk', event.data);
+          switch (uploadStrategy) {
+            case UploadStrategy.NONE:
+              break;
+            case UploadStrategy.IMMEDIATE:
+              // 即时上传策略
+              const chunkSize = Math.ceil(event.data.length * 3 / 4);
+              firstValueFrom(this.uploadChunck(digest, event.data))
+                .catch(error => {
+                  console.error('Failed to upload chunk:', error);
+                });
 
-          const chunkSize = Math.ceil(event.data.length * 3 / 4);
-          await this.http.post('/dip/api/docker/blob/chunk', formData).toPromise();
-
-          totalUploaded += chunkSize;
-          const uploadPercentage = (totalUploaded / size) * 100;
-          observer.next({ p: -1, u: uploadPercentage, d: -1 });
+              totalUploaded += chunkSize;
+              const uploadPercentage = (totalUploaded / size) * 100;
+              observer.next({ p: -1, u: uploadPercentage, d: -1 });
+              break;
+            case UploadStrategy.COMPLETE:
+              // 完成后上传策略：收集数据
+              chunkBuffer.push(event.data);
+              bufferSize += Math.ceil(event.data.length * 3 / 4);
+              break;
+          }
 
         } catch (error) {
-          console.error('Failed to upload chunk:', error);
-          observer.error('上传数据块失败');
+          console.error('Failed to process chunk:', error);
+          observer.error('处理数据块失败');
           eventSource.close();
         }
+      });
+
+      eventSource.addEventListener('complete', (event) => {
+        const result = JSON.parse(event.data);
+        if (result.digest === digest) {
+          if (uploadStrategy === UploadStrategy.COMPLETE && chunkBuffer.length > 0) {
+            // 完成后上传策略：一次性上传所有数据
+            firstValueFrom(this.uploadChunck(digest, chunkBuffer.join("")))
+              .then(() => {
+                observer.next({ p: 100, u: 100, d: result.size });
+                observer.complete();
+              })
+              .catch(error => {
+                console.error('Failed to upload chunks:', error);
+                observer.error('上传数据失败');
+              });
+          } else {
+            observer.next({ p: 100, u: 100, d: result.size });
+            observer.complete();
+          }
+        }
+        eventSource.close();
       });
 
       eventSource.addEventListener('progress', (event) => {
@@ -139,15 +191,6 @@ export class DockerService {
         if (progress.digest === digest) {
           observer.next({ p: progress.percentage, u: -1, d: progress.downloaded });
         }
-      });
-
-      eventSource.addEventListener('complete', (event) => {
-        const result = JSON.parse(event.data);
-        if (result.digest === digest) {
-          observer.next({ p: 100, u: 100, d: result.size });
-          observer.complete();
-        }
-        eventSource.close();
       });
 
       eventSource.addEventListener('error', (event: any) => {
@@ -159,13 +202,12 @@ export class DockerService {
     });
   }
 
+  // 修改调用方法
   downloadLayer(imageUrl: string, digest: string, size: number): Observable<{ p: number, u: number, d: number }> {
-    return this.createBlobDownloadStream(imageUrl, digest, size);
+    return this.createBlobDownloadStream(imageUrl, digest, size, undefined, UploadStrategy.IMMEDIATE);
   }
 
-  mergeImage(image: string, manifest: Manifest, layers: string[]): Observable<any> {
-    return this.http.post("/dip/api/docker/merge", { image, manifest, layers });
-  }
+
 
   downloadConfig(imageUrl: string, digest: string, size: number): Observable<any> {
     const key = `config_${imageUrl}`
@@ -175,13 +217,13 @@ export class DockerService {
     }
 
     let configData = '';
-
     return new Observable(observer => {
       this.createBlobDownloadStream(
         imageUrl,
         digest,
         size,
-        (data) => { configData += data }
+        (data) => { configData += data },
+        UploadStrategy.NONE  // 配置文件使用完成后上传策略
       ).subscribe({
         complete: () => {
           try {
@@ -197,5 +239,29 @@ export class DockerService {
         error: (error) => observer.error(error)
       });
     });
+  }
+
+  /**
+   * 上传文件分片
+   * @param digest 摘要信息
+   * @param chunks 文件内容
+   * @returns
+   */
+  uploadChunck(digest: string, chunks: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('digest', digest);
+    formData.append('chunks', chunks);
+    return this.http.post('/dip/api/docker/blob/chunk', formData);
+  }
+
+  /**
+   * 合并镜像包
+   * @param image 镜像地址
+   * @param manifest
+   * @param layers 层信息
+   * @returns
+   */
+  mergeImage(image: string, manifest: Manifest): Observable<any> {
+    return this.http.post("/dip/api/docker/merge", { image, manifest });
   }
 }

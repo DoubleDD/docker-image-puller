@@ -70,7 +70,6 @@ type Manifest struct {
 
 type MergeRequest struct {
 	Manifest Manifest `json:"manifest"`
-	Layers   []string `json:"layers"`
 	Image    string   `json:"image"`
 }
 
@@ -461,7 +460,7 @@ func (client *DockerRegistryClient) downloadBlobWithSSE(repo, tag, digest string
 		c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), f, nil)
 	} else {
 		// 使用缓冲读取并报告进度
-		buffer := make([]byte, 32*1024) // 32KB 缓冲区
+		buffer := make([]byte, 2*1024*1024) // 1MB 缓冲区
 		var downloaded int64
 
 		for {

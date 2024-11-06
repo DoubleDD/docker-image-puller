@@ -1,9 +1,10 @@
 import { CommonModule } from "@angular/common";
-import { Component } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { firstValueFrom } from "rxjs";
 import { DockerService } from "./docker.service";
 import { FileSizePipe } from '../shared/pipes/file-size.pipe';
+import { MathFloorPipe } from "../shared/pipes/math-floor.pipe";
 
 export interface Layer {
   digest: string;
@@ -31,11 +32,12 @@ export interface Manifest {
 @Component({
   selector: "app-docker-pull",
   standalone: true,
-  imports: [CommonModule, FormsModule, FileSizePipe],
+  imports: [CommonModule, FormsModule, FileSizePipe, MathFloorPipe],
   templateUrl: "./docker-pull.component.html",
   styleUrl: "./docker-pull.component.css",
 })
-export class DockerPullComponent {
+export class DockerPullComponent implements
+  OnInit {
   imageUrl = "registry.cn-zhangjiakou.aliyuncs.com/yunli_mid_platform/resource:dtwin-etl-shg-be-1.0.0-xc-arm64";
   manifest: Manifest | null = null;
   layers: Layer[] = [];
@@ -43,7 +45,15 @@ export class DockerPullComponent {
   error = "";
   configContent: any = null;
 
-  constructor(private dockerService: DockerService) {}
+  constructor(private dockerService: DockerService) {
+  }
+  debug = false;
+
+  ngOnInit(): void {
+    const urlParams = new URLSearchParams(window.location.search);
+    this.debug = urlParams.get('debug') === 'true';
+  }
+
 
   async fetchManifest() {
     try {
@@ -71,15 +81,43 @@ export class DockerPullComponent {
         this.manifest.config.size
       ));
 
-      // 下载镜像各个层的内容
-      // this.handlePullImage()
+      if (!this.debug) {
+        // 下载镜像各个层的内容
+        this.handlePullImage()
+      }
 
     } catch (error: any) {
       this.error = error.message || 'Failed to fetch manifest';
+      console.error(error)
     } finally {
       this.isProcessing = false;
     }
   }
+
+
+  async handlePullImage() {
+    if (!this.manifest) return;
+
+    this.isProcessing = true;
+    this.error = "";
+
+    try {
+      // 获取manifest config内容
+      await Promise.all([
+        this.dockerService.uploadChunck(this.manifest.config.digest, btoa(JSON.stringify(this.configContent))).toPromise(),
+        ...this.layers.map((layer) => this.processLayer(layer))
+      ]);
+
+      // 合并镜像
+      await this.dockerService.mergeImage(this.imageUrl, this.manifest,).toPromise();
+    } catch (err) {
+      this.error = "Failed to process image layers";
+      console.error(err);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
 
   private async processLayer(layer: Layer): Promise<void> {
     try {
@@ -123,28 +161,7 @@ export class DockerPullComponent {
     );
   }
 
-  async handlePullImage() {
-    if (!this.manifest) return;
 
-    this.isProcessing = true;
-    this.error = "";
-
-    try {
-      await Promise.all(this.layers.map((layer) => this.processLayer(layer)));
-      await this.dockerService
-        .mergeImage(
-          this.imageUrl,
-          this.manifest,
-          this.layers.map((l) => l.digest),
-        )
-        .toPromise();
-    } catch (err) {
-      this.error = "Failed to process image layers";
-      console.error(err);
-    } finally {
-      this.isProcessing = false;
-    }
-  }
 
   getExposedPorts(): string[] {
     return this.configContent?.config?.ExposedPorts

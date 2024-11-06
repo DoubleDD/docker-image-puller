@@ -14,10 +14,13 @@
         <button (click)="fetchManifest()" [disabled]="!imageUrl || isProcessing"
           class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm">
           <span *ngIf="!isProcessing" class="flex items-center gap-2">
+            @if (debug) {
+            <i class="fas fa-search"></i>
+            Fetch Manifest
+            }@else {
             <i class="fas fa-download"></i>
             Pull
-            <!-- <i class="fas fa-search"></i>
-            Fetch Manifest -->
+            }
           </span>
           <span *ngIf="isProcessing" class="flex items-center gap-2">
             <i class="fas fa-spinner fa-spin"></i>
@@ -154,7 +157,7 @@
             <div>
               <div class="flex justify-between text-xs text-gray-600 mb-2">
                 <span>Upload Progress</span>
-                <span>{{ layer.uploadProgress }}%</span>
+                <span>{{ layer.uploadProgress | mathFloor}}%</span>
               </div>
               <div class="w-full bg-gray-100 rounded-full h-2">
                 <div class="bg-green-500 h-2 rounded-full transition-all duration-300"
@@ -165,12 +168,15 @@
           </div>
         </div>
 
+        @if (debug) {
         <!-- Pull Button -->
         <button (click)="handlePullImage()" [disabled]="isProcessing || layers.length === 0"
           class="w-full px-6 py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 font-medium">
           <i class="fas fa-download"></i>
           Pull and Process Image
         </button>
+        }
+
       </div>
     </div>
   </div>
