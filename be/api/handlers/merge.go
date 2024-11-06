@@ -25,12 +25,12 @@ func MergeImage(c *gin.Context) {
 
 	// 创建临时目录用于存放最终的镜像文件
 	tmpDir := utils.UserHomeTmpDir()
-	outputFile := filepath.Join(tmpDir, fmt.Sprintf("image_%d.tar", time.Now().UnixNano()))
+	outputFile := filepath.Join(tmpDir, fmt.Sprintf("%s_%s.tar", req.Image, time.Now().Format("2006-01-02_15:04:05")))
 
 	// 创建tar文件
-	tf, err := os.Create(outputFile)
+	tf, err := utils.CreateFile(outputFile)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create output file"})
+		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to create output file", "error": err})
 		return
 	}
 	defer tf.Close()
@@ -65,8 +65,12 @@ func MergeImage(c *gin.Context) {
 		return
 	}
 
+	// 合并配置文件
+	configDir := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
+	configFile := filepath.Join(configDir, "all")
+	utils.MergeFiles(configDir, configFile)
+
 	// 写入配置文件
-	configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
 	configData, err := os.ReadFile(configFile)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read config file"})
@@ -81,7 +85,10 @@ func MergeImage(c *gin.Context) {
 
 	// 处理每一层
 	for _, layer := range req.Manifest.Layers {
-		layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
+		// 合并层文件
+		layerSourceDir := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
+		layerFile := filepath.Join(layerSourceDir, "all")
+		utils.MergeFiles(layerSourceDir, layerFile)
 
 		// 创建层目录
 		layerDir := layer.Digest[7:]
@@ -110,12 +117,12 @@ func MergeImage(c *gin.Context) {
 	defer func() {
 		// 删除配置文件
 		configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
-		os.Remove(configFile)
+		os.RemoveAll(configFile)
 
 		// 删除每一层的临时文件
 		for _, layer := range req.Manifest.Layers {
 			layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
-			os.Remove(layerFile)
+			os.RemoveAll(layerFile)
 		}
 
 	}()

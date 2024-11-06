@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -73,8 +74,7 @@ func UploadBlobChunk(c *gin.Context) {
 		return
 	}
 
-	// strings.Replace(digest, ":", "_", -1)
-	tmpDir := filepath.Join(utils.UserHomeTmpDir(), digest)
+	tmpDir := filepath.Join(utils.UserHomeTmpDir(), strings.Replace(digest, ":", "_", -1))
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
 		return
