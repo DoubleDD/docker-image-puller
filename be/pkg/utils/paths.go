@@ -17,6 +17,6 @@ func UserHomeDir() string {
 }
 
 func UserHomeTmpDir() string {
-	tmpDir := filepath.Join(UserHomeDir(), "tmp")
+	tmpDir := filepath.Join(UserHomeDir(), "tmp", "docker-tool")
 	return tmpDir
 }

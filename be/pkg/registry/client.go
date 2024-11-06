@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -86,7 +85,7 @@ func parseJWTExpireTime(token string) (time.Time, error) {
 	return time.Unix(claims.Exp, 0), nil
 }
 
-// 修改 DockerRegistryClient 的下载方法以支持SSE
+// SSE协议下载文件，持续输出
 func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string, size int64, c *gin.Context) error {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
@@ -112,46 +111,46 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 		return fmt.Errorf("failed to download blob: %d", resp.StatusCode)
 	}
 
-	// 使用 sendfile 进行零拷贝传输
-	if f, ok := resp.Body.(*os.File); ok {
-		// 这行代码使用 gin 框架的 DataFromReader 方法来实现零拷贝传输
-		// - http.StatusOK: 设置 HTTP 响应状态码为 200
-		// - resp.ContentLength: 设置响应内容的长度
-		// - resp.Header.Get("Content-Type"): 设置响应的 Content-Type 头部
-		// - f: 直接从文件对象读取数据并写入响应
-		// - nil: 不使用额外的 headers
-		c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), f, nil)
-	} else {
-		// 使用缓冲读取并报告进度
-		buffer := make([]byte, 2*1024*1024) // 1MB 缓冲区
-		var downloaded int64
+	maxBufferSize := 2 * 1024 * 1024
 
-		for {
-			n, err := resp.Body.Read(buffer)
-			if n > 0 {
-				// 发送数据块
-				c.SSEvent("data", base64.StdEncoding.EncodeToString(buffer[:n]))
-				c.Writer.Flush()
+	// 使用缓冲读取并报告进度
+	buffer := make([]byte, maxBufferSize) // 1MB 缓冲区
+	var downloaded, chunkNumber, totalRead int64
 
-				downloaded += int64(n)
-				percentage := float64(downloaded) / float64(size) * 100
+	for {
+		n, err := resp.Body.Read(buffer[totalRead:])
+		if n > 0 {
+			totalRead += int64(n)
+			downloaded += int64(n)
+			// 计算进度
+			percentage := float64(downloaded) / float64(size) * 100
+			// 发送进度事件
+			c.SSEvent("progress", gin.H{
+				"size":       n,
+				"digest":     digest,
+				"downloaded": downloaded,
+				"total":      size,
+				"percentage": percentage,
+			})
+			c.Writer.Flush()
+		}
+		// 如果达到 5MB 或文件已读取完，则发送数据块
+		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
+			// 发送数据块
+			c.SSEvent("data", gin.H{
+				"no":   chunkNumber,
+				"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
+			})
+			c.Writer.Flush()
+			totalRead = 0 // 重置缓冲区
+			chunkNumber++
+		}
 
-				// 发送进度事件
-				c.SSEvent("progress", gin.H{
-					"digest":     digest,
-					"downloaded": downloaded,
-					"total":      size,
-					"percentage": percentage,
-				})
-				c.Writer.Flush()
-			}
-
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
 		}
 	}
 

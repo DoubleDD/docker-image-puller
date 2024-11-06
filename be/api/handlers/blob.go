@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +63,7 @@ func StartBlobDownload(c *gin.Context) {
 // 新增：处理分块上传的处理器
 func UploadBlobChunk(c *gin.Context) {
 	digest := c.PostForm("digest")
+	no := c.PostForm("no")
 	chunkData := c.PostForm("chunk")
 
 	// Base64解码
@@ -73,14 +73,15 @@ func UploadBlobChunk(c *gin.Context) {
 		return
 	}
 
-	tmpDir := utils.UserHomeTmpDir()
+	// strings.Replace(digest, ":", "_", -1)
+	tmpDir := filepath.Join(utils.UserHomeTmpDir(), digest)
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
 		return
 	}
 
 	// 创建或追加到文件
-	fileName := filepath.Join(tmpDir, strings.Replace(digest, ":", "_", -1))
+	fileName := filepath.Join(tmpDir, "chunk-"+no)
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
