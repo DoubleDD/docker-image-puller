@@ -15,7 +15,7 @@ interface CachedManifest {
 })
 export class DockerService {
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
-  private readonly CACHE_DURATION =  30 * 60 * 1000; // 30分钟的缓存时间（毫秒）
+  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30分钟的缓存时间（毫秒）
 
   constructor(private http: HttpClient) { }
 
@@ -168,6 +168,12 @@ export class DockerService {
   }
 
   downloadConfig(imageUrl: string, digest: string, size: number): Observable<any> {
+    const key = `config_${imageUrl}`
+    const cachedData = this.getFromCache(key);
+    if (cachedData) {
+      return of(cachedData);
+    }
+
     let configData = '';
 
     return new Observable(observer => {
@@ -181,6 +187,7 @@ export class DockerService {
           try {
             const decodedData = atob(configData);
             const config = JSON.parse(decodedData);
+            this.saveToCache(key, config)
             observer.next(config);
             observer.complete();
           } catch (error) {

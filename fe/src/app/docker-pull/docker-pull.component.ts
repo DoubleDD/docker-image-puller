@@ -52,13 +52,10 @@ export class DockerPullComponent {
       this.manifest = null;
       this.configContent = null;
 
+      // 获取manifest
       this.manifest = await firstValueFrom(this.dockerService.getManifest(this.imageUrl));
-      this.configContent = await firstValueFrom(this.dockerService.downloadConfig(
-        this.imageUrl,
-        this.manifest.config.digest,
-        this.manifest.config.size
-      ));
 
+      // 解析层内容
       this.layers = this.manifest.layers.map(layer => ({
         ...layer,
         status: 'pending',
@@ -66,6 +63,17 @@ export class DockerPullComponent {
         uploadProgress: 0,
         downloaded: 0
       }));
+
+      // 获取config文件内容
+      this.configContent = await firstValueFrom(this.dockerService.downloadConfig(
+        this.imageUrl,
+        this.manifest.config.digest,
+        this.manifest.config.size
+      ));
+
+      // 下载镜像各个层的内容
+      // this.handlePullImage()
+
     } catch (error: any) {
       this.error = error.message || 'Failed to fetch manifest';
     } finally {

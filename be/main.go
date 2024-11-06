@@ -709,6 +709,20 @@ func mergeImageHandler(c *gin.Context) {
 		return
 	}
 
+	// 延迟删除临时文件
+	defer func() {
+		// 删除配置文件
+		configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
+		os.Remove(configFile)
+
+		// 删除每一层的临时文件
+		for _, layer := range req.Manifest.Layers {
+			layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
+			os.Remove(layerFile)
+		}
+
+	}()
+
 	c.JSON(http.StatusOK, gin.H{"ok": "Done!"})
 }
 
