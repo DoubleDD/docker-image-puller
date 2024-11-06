@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,6 +18,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// 默认配置
+var DEFAULT_USERNAME = "kedong@yunlizhihui"
+var DEFAULT_PASSWORD = "kedong@123"
+var DEFAULT_PUSH_REGISTRY = "172.27.35.4:5000"
+var DEFAULT_PULL_REGISTRY = "registry.hub.docker.com"
 
 func main() {
 	r := gin.Default()
@@ -71,6 +78,7 @@ type Manifest struct {
 type MergeRequest struct {
 	Manifest Manifest `json:"manifest"`
 	Image    string   `json:"image"`
+	Registry string   `json:"registry"`
 }
 
 // 新增：获取registry认证token的响应结构
@@ -109,7 +117,7 @@ func parseImageAddress(imageAddress string) (registry, repository, tag string, e
 		repository = strings.Join(addressParts[1:], "/")
 	} else {
 		// 默认使用Docker Hub
-		registry = "registry.hub.docker.com"
+		registry = DEFAULT_PULL_REGISTRY
 		repository = imageAddress
 	}
 
@@ -158,8 +166,8 @@ func WithAuth(username, password string) func(*DockerRegistryClient) {
 }
 func DefaultAuth() func(*DockerRegistryClient) {
 	return func(c *DockerRegistryClient) {
-		c.Username = "kedong@yunlizhihui"
-		c.Password = "kedong@123"
+		c.Username = DEFAULT_USERNAME
+		c.Password = DEFAULT_PASSWORD
 	}
 }
 
@@ -532,20 +540,6 @@ func generateCurlCommand(req *http.Request) string {
 	return cmd
 }
 
-// 用于跟踪写入进度的辅助结构
-type WriteCounter struct {
-	Total      int64
-	OnProgress func(int64)
-}
-
-func (wc *WriteCounter) Write(p []byte) (int, error) {
-	n := len(p)
-	if wc.OnProgress != nil {
-		wc.OnProgress(int64(n))
-	}
-	return n, nil
-}
-
 // 新增：HTTP 客户端结构体
 type httpClient struct {
 	client  *http.Client
@@ -567,7 +561,7 @@ func (c *httpClient) newRequest(method, path string, body io.Reader) (*http.Requ
 	return req, nil
 }
 
-// 新增：在 DockerRegistryClient 中添���创建认证客户端的方法
+// 新增：在 DockerRegistryClient 中添加创建认证客户端的方法
 func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*httpClient, error) {
 	token, err := client.getJWT(repo, tag)
 	if err != nil {
@@ -722,6 +716,9 @@ func mergeImageHandler(c *gin.Context) {
 
 	}()
 
+	// 新开一个协程用来执行 docker tag、docker push等操作
+	go pushImage(outputFile, req.Image, req.Registry)
+
 	c.JSON(http.StatusOK, gin.H{"ok": "Done!"})
 }
 
@@ -743,4 +740,52 @@ func addFileToTar(tw *tar.Writer, name string, data []byte) error {
 	}
 
 	return nil
+}
+
+func pushImage(tarFile, image, registry string) {
+	fmt.Printf("开始处理镜像推送任务...\n")
+	fmt.Printf("镜像文件: %s\n镜像名称: %s\n目标仓库: %s\n", tarFile, image, registry)
+
+	if registry == "" {
+		registry = DEFAULT_PUSH_REGISTRY
+		fmt.Printf("使用默认镜像仓库: %s\n", registry)
+	}
+
+	fmt.Printf("步骤1: 加载镜像文件...\n")
+	loadCmd := exec.Command("docker", "load", "-i", tarFile)
+	if err := loadCmd.Run(); err != nil {
+		fmt.Printf("❌ 镜像加载失败: %v\n", err)
+		return
+	}
+	fmt.Printf("✅ 镜像加载成功\n")
+
+	_, repository, tag, _ := parseImageAddress(image)
+	newTag := fmt.Sprintf("%s/%s:%s", registry, repository, tag)
+	fmt.Printf("步骤2: 标记镜像\n [%s] -> [%s]...\n", image, newTag)
+
+	tagCmd := exec.Command("docker", "tag", image, newTag)
+	if err := tagCmd.Run(); err != nil {
+		fmt.Printf("❌ 镜像标记失败: %v\n", err)
+		return
+	}
+	fmt.Printf("✅ 镜像标记成功\n")
+
+	defer func() {
+		fmt.Printf("步骤4: 清理临时文件 [%s]...\n", tarFile)
+		if err := os.Remove(tarFile); err != nil {
+			fmt.Printf("⚠️ 临时文件清理失败: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ 临时文件清理成功\n")
+	}()
+
+	fmt.Printf("步骤3: 推送镜像\n [%s]...\n", newTag)
+	pushCmd := exec.Command("docker", "push", newTag)
+	if err := pushCmd.Run(); err != nil {
+		fmt.Printf("❌ 镜像推送失败: %v\n", err)
+		return
+	}
+	fmt.Printf("✅ 镜像推送成功\n")
+
+	fmt.Printf("🎉 镜像处理任务完成!\n")
 }

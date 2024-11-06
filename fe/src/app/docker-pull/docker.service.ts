@@ -250,7 +250,7 @@ export class DockerService {
   uploadChunck(digest: string, chunks: string): Observable<any> {
     const formData = new FormData();
     formData.append('digest', digest);
-    formData.append('chunks', chunks);
+    formData.append('chunk', chunks);
     return this.http.post('/dip/api/docker/blob/chunk', formData);
   }
 
