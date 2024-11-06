@@ -42,6 +42,7 @@ testem.log
 Thumbs.db
 be/__debug*
 be/tmp
-be/docker-image-handler
+be/build
+be/vendor
 fe/.angular
 fe/dist
