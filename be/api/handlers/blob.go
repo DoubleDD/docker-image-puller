@@ -74,7 +74,12 @@ func UploadBlobChunk(c *gin.Context) {
 	}
 
 	// 确保临时目录存在
-	tmpDir := "./tmp"
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	tmpDir := filepath.Join(homeDir, "tmp")
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp directory"})
 		return
