@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && zip -r dist.zip dist/",
+    "build": "ng build && zip -r dist.zip dist/ && mv dist.zip ~/Downloads/docker/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

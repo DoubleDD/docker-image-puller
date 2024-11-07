@@ -1,6 +1,11 @@
-import { HttpClient } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  HttpHeaders,
+} from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom, Observable, of, tap } from 'rxjs';
+import { firstValueFrom, Observable, of, tap, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { Manifest } from './docker-pull.component';
 
 interface CachedManifest {
@@ -138,7 +143,13 @@ export class DockerService {
               // 在网络不好的时候，一个请求要等很久才能结束，这里需要记录开始和结束的请求，只有两个相等时，才表明所有的请求都结束了
               // 开始的请求计数
               startCount++;
-              await this.uploadChunck(digest, chunk.no, chunk.data);
+              const resp = await this.uploadChunck(
+                digest,
+                chunk.no,
+                chunk.data,
+                chunk.md5,
+              );
+
               // 结束的请求计数
               endCount++;
 
@@ -172,7 +183,7 @@ export class DockerService {
             chunkBuffer.length > 0
           ) {
             // 完成后上传策略：一次性上传所有数据
-            this.uploadChunck(digest, '0', chunkBuffer.join(''))
+            this.uploadChunck(digest, 0, chunkBuffer.join(''))
               .then(() => {
                 observer.next({ p: 100, u: 100, d: result.size });
                 observer.complete();
@@ -272,17 +283,56 @@ export class DockerService {
    * @param chunks 文件内容
    * @returns
    */
-  uploadChunck(digest: string, no: string, chunks: string): Promise<any> {
+  uploadChunck(
+    digest: string,
+    no: number,
+    chunks: string,
+    hash?: string,
+  ): Promise<any> {
+    const index = no.toString().padStart(4, '0');
     const formData = new FormData();
     formData.append('digest', digest);
-    formData.append('no', no);
+    formData.append('no', index);
     formData.append('size', (chunks.length * 3) / 4 + '');
     formData.append('chunk', chunks);
     return firstValueFrom(
       this.http.post('/dip/api/docker/blob/chunk', formData),
     );
   }
+  // 发送预检请求
+  sendPreflightRequest(
+    hash: string,
+    index: string,
+    digest: string,
+  ): Observable<boolean> {
+    const headers = new HttpHeaders({
+      md5: hash || '',
+      no: index,
+      digest: digest,
+    });
 
+    return this.http
+      .get('/dip/api/docker/blob/chunk/pre', { headers, observe: 'response' })
+      .pipe(
+        map((response) => {
+          // 处理204 No Content状态码
+          if (response.status === 204) {
+            return true; // 表示可以继续上传文件
+          }
+          return false;
+        }),
+        catchError((error: HttpErrorResponse) => {
+          // 处理403 Forbidden状态码
+          if (error.status === 403) {
+            console.error('Preflight request failed: md5 header is required');
+            return throwError('md5 header is required');
+          }
+          // 处理其他错误
+          console.error('Preflight request failed:', error);
+          return throwError('Preflight request failed');
+        }),
+      );
+  }
   /**
    * 合并镜像包
    * @param image 镜像地址

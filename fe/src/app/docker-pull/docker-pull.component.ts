@@ -104,7 +104,7 @@ export class DockerPullComponent implements OnInit {
     Promise.all([
       this.dockerService.uploadChunck(
         this.manifest.config.digest,
-        '0',
+        0,
         btoa(JSON.stringify(this.configContent)),
       ),
       ...this.layers.map((layer) => this.processLayer(layer)),
