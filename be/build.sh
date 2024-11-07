@@ -16,7 +16,7 @@ for platform in "${platforms[@]}"; do
 	platform_split=(${platform//\// })
 	GOOS=${platform_split[0]}
 	GOARCH=${platform_split[1]}
-	output_name='docker-image-tools-'$GOOS'-'$GOARCH
+	output_name='docker-tools-'$GOOS'-'$GOARCH
 
 	# Windows 平台需要添加 .exe 后缀
 	if [ $GOOS = "windows" ]; then
@@ -37,3 +37,6 @@ for platform in "${platforms[@]}"; do
 		chmod +x $output_path
 	fi
 done
+
+rm -rf ~/Downloads/docker/build/
+cp -r build ~/Downloads/docker/

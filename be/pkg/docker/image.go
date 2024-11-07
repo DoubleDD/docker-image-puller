@@ -8,7 +8,7 @@ import (
 	"os/exec"
 )
 
-func PushImage(tarFile, image, registry string) {
+func PushImage(tarFile, image, registry string) error {
 	cfg := config.Load()
 
 	fmt.Printf("开始处理镜像推送任务...\n")
@@ -23,7 +23,7 @@ func PushImage(tarFile, image, registry string) {
 	loadCmd := exec.Command("docker", "load", "-i", tarFile)
 	if err := loadCmd.Run(); err != nil {
 		fmt.Printf("❌ 镜像加载失败: %v\n", err)
-		return
+		return err
 	}
 	fmt.Printf("✅ 镜像加载成功\n")
 
@@ -34,7 +34,7 @@ func PushImage(tarFile, image, registry string) {
 	tagCmd := exec.Command("docker", "tag", image, newTag)
 	if err := tagCmd.Run(); err != nil {
 		fmt.Printf("❌ 镜像标记失败: %v\n", err)
-		return
+		return err
 	}
 	fmt.Printf("✅ 镜像标记成功\n")
 
@@ -51,9 +51,11 @@ func PushImage(tarFile, image, registry string) {
 	pushCmd := exec.Command("docker", "push", newTag)
 	if err := pushCmd.Run(); err != nil {
 		fmt.Printf("❌ 镜像推送失败: %v\n", err)
-		return
+		return err
 	}
 	fmt.Printf("✅ 镜像推送成功\n")
 
 	fmt.Printf("🎉 镜像处理任务完成!\n")
+
+	return nil
 }

@@ -114,21 +114,25 @@ func MergeImage(c *gin.Context) {
 	}
 
 	// 延迟删除临时文件
-	defer func() {
-		// 删除配置文件
-		configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
-		os.RemoveAll(configFile)
-
-		// 删除每一层的临时文件
-		for _, layer := range req.Manifest.Layers {
-			layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
-			os.RemoveAll(layerFile)
-		}
-
-	}()
+	// defer func() {
+	// 	// 删除配置文件
+	// 	configFile := filepath.Join(tmpDir, strings.Replace(req.Manifest.Config.Digest, ":", "_", -1))
+	// 	os.RemoveAll(configFile)
+	//
+	// 	// 删除每一层的临时文件
+	// 	for _, layer := range req.Manifest.Layers {
+	// 		layerFile := filepath.Join(tmpDir, strings.Replace(layer.Digest, ":", "_", -1))
+	// 		os.RemoveAll(layerFile)
+	// 	}
+	//
+	// }()
 
 	// 新开一个协程用来执行 docker tag、docker push等操作
-	go docker.PushImage(outputFile, req.Image, req.Registry)
+	err = docker.PushImage(outputFile, req.Image, req.Registry)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"msg": "合并镜像失败", "error": err})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": "Done!"})
 }

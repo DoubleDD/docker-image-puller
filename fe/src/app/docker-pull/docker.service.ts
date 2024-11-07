@@ -276,6 +276,7 @@ export class DockerService {
     const formData = new FormData();
     formData.append('digest', digest);
     formData.append('no', no);
+    formData.append('size', (chunks.length * 3) / 4 + '');
     formData.append('chunk', chunks);
     return firstValueFrom(
       this.http.post('/dip/api/docker/blob/chunk', formData),
