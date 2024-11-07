@@ -1,7 +1,9 @@
 package registry
 
 import (
+	"crypto/md5"
 	"docker-image-handler/config"
+	"docker-image-handler/pkg/utils"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -136,9 +138,11 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 		}
 		// 如果达到 5MB 或文件已读取完，则发送数据块
 		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
+			md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
 			// 发送数据块
 			c.SSEvent("data", gin.H{
 				"no":   chunkNumber,
+				"md5":  md5Hash,
 				"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
 			})
 			c.Writer.Flush()

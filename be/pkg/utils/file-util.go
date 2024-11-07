@@ -1,11 +1,15 @@
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
 func MergeFiles(dirPath, outputFile string) {
@@ -77,4 +81,53 @@ func CreateFile(filename string) (*os.File, error) {
 		return nil, err
 	}
 	return os.Create(filename)
+}
+
+func CheckFileMd5(filePath, md5Hash string) bool {
+	fileMd5 := FileMd5(filePath)
+	fmt.Println("校验md5", filePath, "\n", md5Hash, "\n", fileMd5)
+	return md5Hash == fileMd5
+}
+
+func FileMd5(filePath string) string {
+	// MD5
+	md5Hash, md5Time := calculateHash(filePath, md5.New)
+	fmt.Printf("MD5: %s (Time: %s)\n", md5Hash, md5Time)
+	return md5Hash
+}
+
+func calculateHash(filePath string, hashFunc func() hash.Hash) (string, time.Duration) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return "", 0
+	}
+	defer file.Close()
+
+	hash := hashFunc()
+
+	start := time.Now()
+	if _, err := io.Copy(hash, file); err != nil {
+		fmt.Println("Error hashing file:", err)
+		return "", 0
+	}
+	elapsed := time.Since(start)
+
+	hashInBytes := hash.Sum(nil)
+	hashString := hex.EncodeToString(hashInBytes)
+
+	return hashString, elapsed
+}
+
+func DataHash(data []byte, hashFunc func() hash.Hash) (string, time.Duration) {
+	hash := hashFunc()
+
+	start := time.Now()
+	hash.Write(data)
+	elapsed := time.Since(start)
+
+	hashInBytes := hash.Sum(nil)
+	hashString := hex.EncodeToString(hashInBytes)
+
+	return hashString, elapsed
 }
