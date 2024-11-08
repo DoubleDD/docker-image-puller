@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 镜像文件下载
+// ImageLayerBlobDownload 镜像文件下载
 func ImageLayerBlobDownload(c *gin.Context) {
 	image := c.Query("image")
 	digest := c.Query("digest")
@@ -62,7 +62,7 @@ func ImageLayerBlobDownload(c *gin.Context) {
 	}
 }
 
-// 上传预检
+// UploadBlobChunkInitiate 上传预检
 func UploadBlobChunkInitiate(c *gin.Context) {
 	chunkMd5 := c.Request.Header.Get("md5")
 	digest := c.Request.Header.Get("digest")
@@ -89,7 +89,7 @@ func UploadBlobChunkInitiate(c *gin.Context) {
 	}
 }
 
-// 新增：处理分块上传的处理器
+// UploadBlobChunk 新增：处理分块上传的处理器
 func UploadBlobChunk(c *gin.Context) {
 	digest := c.PostForm("digest")
 	no := c.PostForm("no")

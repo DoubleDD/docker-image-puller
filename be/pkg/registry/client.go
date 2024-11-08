@@ -2,6 +2,7 @@ package registry
 
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"docker-image-handler/config"
 	"docker-image-handler/pkg/utils"
 	"encoding/base64"
@@ -10,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -114,8 +117,89 @@ func parseJWTExpireTime(token string) (time.Time, error) {
 	return time.Unix(claims.Exp, 0), nil
 }
 
-// SSE协议下载文件，持续输出
+// DownloadBlobWithSSE SSE协议下载文件，持续输出
 func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string, size int64, c *gin.Context) error {
+	// 检查本地是否有缓存，有缓存直接返回缓存
+	tmpDir := filepath.Join(utils.UserHomeTmpDir(), strings.Replace(digest, ":", "_", -1))
+	fileName := filepath.Join(tmpDir, "all")
+	if utils.CheckFileHash(fileName, digest[7:], sha256.New) {
+		// 从本地获取
+		fmt.Println("从本地获取", digest)
+		err := downloadFromCache(fileName, digest, size, c)
+		if err != nil {
+			return err
+		}
+	} else {
+		// 从网络下载
+		fmt.Println("从网络下载", digest)
+		err2 := downloadFromNetwork(repo, tag, digest, size, c, client)
+		if err2 != nil {
+			return err2
+		}
+	}
+	// 发送完成事件
+	c.SSEvent("complete", gin.H{
+		"digest": digest,
+		"size":   size,
+	})
+	c.Writer.Flush()
+
+	return nil
+}
+func downloadFromCache(fileName, digest string, size int64, c *gin.Context) error {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	maxBufferSize := 2 * 1024 * 1024
+	buffer := make([]byte, maxBufferSize) // 2MB 缓冲区
+	var downloaded, chunkNumber, totalRead int64
+
+	for {
+		n, err := file.Read(buffer[totalRead:])
+		if n > 0 {
+			totalRead += int64(n)
+			downloaded += int64(n)
+			// 计算进度
+			percentage := float64(downloaded) / float64(size) * 100
+			// 发送进度事件
+			c.SSEvent("progress", gin.H{
+				"size":       n,
+				"digest":     digest,
+				"downloaded": downloaded,
+				"total":      size,
+				"percentage": percentage,
+			})
+			c.Writer.Flush()
+		}
+		// 如果达到 2MB 或文件已读取完，则发送数据块
+		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
+			md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
+
+			// 发送数据块
+			c.SSEvent("data", gin.H{
+				"no":   chunkNumber,
+				"md5":  md5Hash,
+				"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
+			})
+			c.Writer.Flush()
+			totalRead = 0 // 重置缓冲区
+			chunkNumber++
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func downloadFromNetwork(repo string, tag string, digest string, size int64, c *gin.Context, client *DockerRegistryClient) error {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return err
@@ -185,14 +269,6 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 			return err
 		}
 	}
-
-	// 发送完成事件
-	c.SSEvent("complete", gin.H{
-		"digest": digest,
-		"size":   size,
-	})
-	c.Writer.Flush()
-
 	return nil
 }
 

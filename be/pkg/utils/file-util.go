@@ -106,7 +106,10 @@ func CheckFileMd5(filePath, md5Hash string) bool {
 	// fmt.Println("校验md5", filePath, "\n预期值：", md5Hash, "\n计算值：", fileMd5)
 	return md5Hash == fileMd5
 }
-
+func CheckFileHash(filePath, hash string, hashFunc func() hash.Hash) bool {
+	fileHash, _ := calculateHash(filePath, hashFunc)
+	return fileHash == hash
+}
 func DataMd5(data []byte) string {
 	// MD5
 	md5Hash, md5Time := DataHash(data, md5.New)
