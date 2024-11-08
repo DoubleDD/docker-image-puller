@@ -15,7 +15,7 @@ import (
 func MergeFiles(dirPath, outputFile string) {
 
 	// 创建或追加到文件
-	outFile, err := os.OpenFile(outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	outFile, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error creating output file:", err)
 		return
@@ -83,12 +83,36 @@ func CreateFile(filename string) (*os.File, error) {
 	return os.Create(filename)
 }
 
-func CheckFileMd5(filePath, md5Hash string) bool {
+func CheckFileAndDataMd5(filePath string, data []byte) bool {
 	fileMd5 := FileMd5(filePath)
-	fmt.Println("校验md5", filePath, "\n预期值：", md5Hash, "\n计算值：", fileMd5)
+	dataMd5 := DataMd5(data)
+
+	// fmt.Println("校验md5", "\n文件MD5：", fileMd5, "\n数据MD5：", dataMd5)
+	return dataMd5 == fileMd5
+}
+func CheckDataMd5(data []byte, md5Hash string) bool {
+	if md5Hash == "" {
+		return false
+	}
+	dataMd5 := DataMd5(data)
+	// fmt.Println("校验md5", "\n预期值：", md5Hash, "\n计算值：", dataMd5)
+	return md5Hash == dataMd5
+}
+func CheckFileMd5(filePath, md5Hash string) bool {
+	if md5Hash == "" {
+		return false
+	}
+	fileMd5 := FileMd5(filePath)
+	// fmt.Println("校验md5", filePath, "\n预期值：", md5Hash, "\n计算值：", fileMd5)
 	return md5Hash == fileMd5
 }
 
+func DataMd5(data []byte) string {
+	// MD5
+	md5Hash, md5Time := DataHash(data, md5.New)
+	fmt.Printf("MD5: %s (Time: %s)\n", md5Hash, md5Time)
+	return md5Hash
+}
 func FileMd5(filePath string) string {
 	// MD5
 	md5Hash, md5Time := calculateHash(filePath, md5.New)

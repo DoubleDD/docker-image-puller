@@ -30,17 +30,18 @@ func ParseImageAddress(imageAddress string) (registry, repository, tag string, e
 	// 分离registry和repository
 	addressParts := strings.Split(address, "/")
 	if len(addressParts) < 2 {
-		return "", "", "", fmt.Errorf("invalid image address format")
-	}
-
-	// 判断第一部分是否包含域名特征（包含'.'或':'）
-	if strings.Contains(addressParts[0], ".") || strings.Contains(addressParts[0], ":") {
-		registry = addressParts[0]
-		repository = strings.Join(addressParts[1:], "/")
-	} else {
 		// 默认使用Docker Hub
 		registry = cfg.DefaultPullRegistry
 		repository = imageAddress
+	} else {
+		// 判断第一部分是否包含域名特征（包含'.'或':'）
+		if strings.Contains(addressParts[0], ".") || strings.Contains(addressParts[0], ":") {
+			registry = addressParts[0]
+			repository = strings.Join(addressParts[1:], "/")
+		} else {
+			registry = cfg.DefaultPullRegistry
+			repository = imageAddress
+		}
 	}
 
 	return registry, repository, tag, nil

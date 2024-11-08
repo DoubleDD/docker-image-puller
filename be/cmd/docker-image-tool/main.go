@@ -3,12 +3,17 @@ package main
 import (
 	"docker-image-handler/api"
 	"docker-image-handler/config"
+	"docker-image-handler/pkg/utils"
 	"log"
+	"net/http"
 )
 
 func main() {
 	// 加载配置
 	cfg := config.Load()
+
+	// 设置 DefaultClient 的 Transport 为我们的 LoggingRoundTripper
+	http.DefaultClient.Transport = &utils.LoggingRoundTripper{}
 
 	// 初始化路由
 	r := api.SetupRouter()

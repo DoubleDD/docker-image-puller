@@ -91,10 +91,6 @@ func UploadBlobChunkInitiate(c *gin.Context) {
 
 // 新增：处理分块上传的处理器
 func UploadBlobChunk(c *gin.Context) {
-	// 检查请求头中的 Expect 字段
-	if c.Request.Header.Get("Expect") == "100-continue" {
-	}
-
 	digest := c.PostForm("digest")
 	no := c.PostForm("no")
 	chunkData := c.PostForm("chunk")

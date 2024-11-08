@@ -290,13 +290,27 @@ export class DockerService {
     hash?: string,
   ): Promise<any> {
     const index = no.toString().padStart(4, '0');
-    const formData = new FormData();
-    formData.append('digest', digest);
-    formData.append('no', index);
-    formData.append('size', (chunks.length * 3) / 4 + '');
-    formData.append('chunk', chunks);
     return firstValueFrom(
-      this.http.post('/dip/api/docker/blob/chunk', formData),
+      this.sendPreflightRequest(hash || '', index, digest).pipe(
+        switchMap((flag) => {
+          if (!flag) {
+            return of(null); // 返回一个空值或错误信息
+          }
+
+          const formData = new FormData();
+          formData.append('digest', digest);
+          formData.append('no', index);
+          formData.append('size', (chunks.length * 3) / 4 + '');
+          formData.append('md5', hash || '');
+          formData.append('chunk', chunks);
+
+          return this.http.post('/dip/api/docker/blob/chunk', formData);
+        }),
+        catchError((error) => {
+          console.error('Error uploading chunk:', error);
+          return of(null); // 处理错误并返回一个空值或错误信息
+        }),
+      ),
     );
   }
   // 发送预检请求

@@ -37,8 +37,7 @@ export interface Manifest {
   styleUrl: './docker-pull.component.css',
 })
 export class DockerPullComponent implements OnInit {
-
-  imageUrl = 'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
+  imageUrl = '';
   manifest: Manifest | null = null;
   layers: Layer[] = [];
   completedLayerCount: number = 0;
@@ -52,6 +51,9 @@ export class DockerPullComponent implements OnInit {
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
     this.debug = urlParams.get('debug') === 'true';
+    this.imageUrl =
+      urlParams.get('repository') ||
+      'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
   }
 
   async fetchManifest() {

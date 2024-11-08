@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -30,6 +28,33 @@ func (c *httpClient) newRequest(method, path string, body io.Reader) (*http.Requ
 	}
 
 	return req, nil
+}
+
+// 新增：创建带有认证的请求
+func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		// 获取请求
+		authUrl, err := parseAuthUrl(resp)
+		if err != nil {
+			return resp, err
+		}
+
+		client := NewDockerRegistryClient("", WithAuth("", ""))
+		token, err := client.getToken(authUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		// 重新发送请求
+		return c.client.Do(req)
+	}
+
+	return resp, nil
 }
 
 // NewDockerRegistryClient 创建新的 DockerRegistryClient 实例
@@ -102,7 +127,7 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 	}
 
 	// 打印 curl 命令
-	curlCmd := generateCurlCommand(req)
+	curlCmd := utils.GenerateCurlCommand(req)
 	fmt.Printf("\nCURL command for replay:\n%s\n\n", curlCmd)
 
 	resp, err := httpClient.client.Do(req)
@@ -142,19 +167,6 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
 			md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
 
-			// debug
-			tmpDir := filepath.Join(utils.UserHomeTmpDir(), strings.Replace(digest, ":", "_", -1))
-			if err := os.MkdirAll(tmpDir, 0755); err != nil {
-				fmt.Println("创建文件夹失败", err)
-			}
-			// 保存文件
-			fileName := filepath.Join(tmpDir, fmt.Sprintf("chunk-%d", chunkNumber))
-			err = utils.CreateFileWithData(fileName, buffer[:totalRead])
-			if err != nil {
-				fmt.Println("保存文件失败", err)
-			}
-			fmt.Println("对比字节数组和文件的md5", utils.CheckFileMd5(fileName, md5Hash))
-
 			// 发送数据块
 			c.SSEvent("data", gin.H{
 				"no":   chunkNumber,
@@ -164,13 +176,6 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 			c.Writer.Flush()
 			totalRead = 0 // 重置缓冲区
 			chunkNumber++
-
-			// debug
-			// 发送完成事件
-			c.SSEvent("complete", gin.H{
-				"digest": digest,
-				"size":   size,
-			})
 		}
 
 		if err == io.EOF {
@@ -191,42 +196,10 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 	return nil
 }
 
-// 新增：生成 curl 命令的辅助函数
-func generateCurlCommand(req *http.Request) string {
-	// 基础命令
-	cmd := fmt.Sprintf("curl -X %s", req.Method)
-
-	// 添加所有请求头
-	for key, values := range req.Header {
-		for _, value := range values {
-			cmd += fmt.Sprintf(" \\\n  -H '%s: %s'", key, value)
-		}
-	}
-
-	// 添加完整 URL
-	fullURL := req.URL.String()
-	if !strings.HasPrefix(fullURL, "http") {
-		if strings.HasPrefix(fullURL, "/") {
-			fullURL = fmt.Sprintf("%s://%s%s", req.URL.Scheme, req.URL.Host, fullURL)
-		} else {
-			fullURL = fmt.Sprintf("%s://%s/%s", req.URL.Scheme, req.URL.Host, fullURL)
-		}
-	}
-	cmd += fmt.Sprintf(" \\\n  '%s'", fullURL)
-
-	// 添加一些有用的 curl 选项
-	cmd += " \\\n  -v" // 添加详细输出
-	cmd += " \\\n  -L" // 跟随重定向
-
-	return cmd
-}
-
 func (client *DockerRegistryClient) getJWT(repo, tag string) (string, error) {
 	cacheKey := fmt.Sprintf("%s:%s", repo, tag)
-
-	// 检查缓存
 	client.mutex.RLock()
-	if item, exists := client.jwtCache[cacheKey]; exists && time.Now().Before(item.expireTime) {
+	if item, ok := client.jwtCache[cacheKey]; ok && item.expireTime.After(time.Now()) {
 		client.mutex.RUnlock()
 		return item.token, nil
 	}
@@ -278,35 +251,7 @@ func (client *DockerRegistryClient) getAuthURL(repo, tag string) (string, error)
 	if resp.StatusCode != http.StatusUnauthorized {
 		return "", errors.New("expected 401 Unauthorized response to extract auth URL")
 	}
-
-	authHeader := resp.Header.Get("WWW-Authenticate")
-	if authHeader == "" {
-		return "", errors.New("WWW-Authenticate header not found")
-	}
-
-	// 使用更可靠的解析方法
-	parts := strings.Split(strings.TrimPrefix(authHeader, "Bearer "), ",")
-	params := make(map[string]string)
-
-	for _, part := range parts {
-		if strings.Contains(part, "=") {
-			kv := strings.SplitN(part, "=", 2)
-			key := strings.TrimSpace(kv[0])
-			// 移除首尾的引号
-			value := strings.Trim(strings.TrimSpace(kv[1]), `"`)
-			params[key] = value
-		}
-	}
-
-	realm := params["realm"]
-	service := params["service"]
-	scope := params["scope"]
-
-	if realm == "" {
-		return "", errors.New("realm not found in auth header")
-	}
-
-	return fmt.Sprintf("%s?service=%s&scope=%s", realm, service, scope), nil
+	return parseAuthUrl(resp)
 }
 
 // 获取 JWT token
@@ -337,15 +282,23 @@ func (client *DockerRegistryClient) getToken(authURL string) (string, error) {
 
 // 新增：在 DockerRegistryClient 中添加创建认证客户端的方法
 func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*httpClient, error) {
-	token, err := client.getJWT(repo, tag)
-	if err != nil {
-		return nil, err
+	defaultConfig := config.Load().DefaultPullRegistry
+	baseURL := fmt.Sprintf("https://%s/v2/%s", client.Registry, repo)
+
+	// If the registry is not the default, attempt to get a JWT token
+	var token string
+	if client.Registry != defaultConfig {
+		var err error
+		token, err = client.getJWT(repo, tag)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get JWT token: %w", err)
+		}
 	}
 
 	return &httpClient{
 		client:  http.DefaultClient,
 		token:   token,
-		baseURL: fmt.Sprintf("https://%s/v2/%s", client.Registry, repo),
+		baseURL: baseURL,
 	}, nil
 }
 
@@ -380,4 +333,88 @@ func (client *DockerRegistryClient) fetchManifest(repo, tag string) (map[string]
 	return manifest, nil
 }
 
+// ListImagesInDirectory queries all images under a specified directory in a repository.
+// It returns the list of image names in the given directory.
+func (client *DockerRegistryClient) ListImages(registry, namespace string) ([]string, error) {
+
+	// Create a new authenticated client for the repository
+	httpClient := &httpClient{
+		client:  http.DefaultClient,
+		baseURL: fmt.Sprintf("https://%s/v2/", registry),
+	}
+
+	// Create the HTTP GET request
+	req, err := httpClient.newRequest("GET", "_catalog", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	curl := utils.GenerateCurlCommand(req)
+	fmt.Println(curl)
+
+	// Perform the request
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to list images in directory: %d", resp.StatusCode)
+	}
+
+	// Parse the response for repository list
+	var catalog struct {
+		Repositories []string `json:"repositories"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&catalog); err != nil {
+		return nil, err
+	}
+
+	// Filter repositories based on the specified directory
+	var imagesInDirectory []string
+	for _, repoName := range catalog.Repositories {
+		if strings.HasPrefix(repoName, namespace) {
+			imagesInDirectory = append(imagesInDirectory, repoName)
+		}
+	}
+
+	return imagesInDirectory, nil
+}
+
 // ... 其他Registry相关方法
+func parseAuthUrl(resp *http.Response) (string, error) {
+
+	authHeader := resp.Header.Get("WWW-Authenticate")
+	if authHeader == "" {
+		return "", errors.New("WWW-Authenticate header not found")
+	}
+
+	// 使用更可靠的解析方法
+	parts := strings.Split(strings.TrimPrefix(authHeader, "Bearer "), ",")
+	params := make(map[string]string)
+
+	for _, part := range parts {
+		if strings.Contains(part, "=") {
+			kv := strings.SplitN(part, "=", 2)
+			key := strings.TrimSpace(kv[0])
+			// 移除首尾的引号
+			value := strings.Trim(strings.TrimSpace(kv[1]), `"`)
+			params[key] = value
+		}
+	}
+
+	realm := params["realm"]
+	service := params["service"]
+	scope := params["scope"]
+
+	if realm == "" {
+		return "", errors.New("realm not found in auth header")
+	}
+	if scope != "" {
+		return fmt.Sprintf("%s?service=%s&scope=%s", realm, service, scope), nil
+	} else {
+		return fmt.Sprintf("%s?service=%s", realm, service), nil
+	}
+}
