@@ -15,7 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func StartBlobDownload(c *gin.Context) {
+// 镜像文件下载
+func ImageLayerBlobDownload(c *gin.Context) {
 	image := c.Query("image")
 	digest := c.Query("digest")
 	// 获取查询参数 "size" 并尝试转换为 int64
@@ -113,16 +114,9 @@ func UploadBlobChunk(c *gin.Context) {
 
 	// 创建或追加到文件
 	fileName := filepath.Join(tmpDir, "chunk-"+no)
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err = utils.CreateFileWithData(fileName, data)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
-		return
-	}
-	defer file.Close()
-
-	// 写入数据
-	if _, err := file.Write(data); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write data"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err, "msg": "Failed to save file"})
 		return
 	}
 

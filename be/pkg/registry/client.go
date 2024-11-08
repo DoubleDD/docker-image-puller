@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -139,6 +141,20 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 		// 如果达到 5MB 或文件已读取完，则发送数据块
 		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
 			md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
+
+			// debug
+			tmpDir := filepath.Join(utils.UserHomeTmpDir(), strings.Replace(digest, ":", "_", -1))
+			if err := os.MkdirAll(tmpDir, 0755); err != nil {
+				fmt.Println("创建文件夹失败", err)
+			}
+			// 保存文件
+			fileName := filepath.Join(tmpDir, fmt.Sprintf("chunk-%d", chunkNumber))
+			err = utils.CreateFileWithData(fileName, buffer[:totalRead])
+			if err != nil {
+				fmt.Println("保存文件失败", err)
+			}
+			fmt.Println("对比字节数组和文件的md5", utils.CheckFileMd5(fileName, md5Hash))
+
 			// 发送数据块
 			c.SSEvent("data", gin.H{
 				"no":   chunkNumber,
@@ -148,6 +164,13 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 			c.Writer.Flush()
 			totalRead = 0 // 重置缓冲区
 			chunkNumber++
+
+			// debug
+			// 发送完成事件
+			c.SSEvent("complete", gin.H{
+				"digest": digest,
+				"size":   size,
+			})
 		}
 
 		if err == io.EOF {

@@ -37,6 +37,7 @@ export interface Manifest {
   styleUrl: './docker-pull.component.css',
 })
 export class DockerPullComponent implements OnInit {
+
   imageUrl = 'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
   manifest: Manifest | null = null;
   layers: Layer[] = [];

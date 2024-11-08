@@ -17,7 +17,7 @@ func SetupRouter() *gin.Engine {
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/docker/manifest", handlers.GetManifest)
-		dip.GET("/api/docker/blob/download", handlers.StartBlobDownload)
+		dip.GET("/api/docker/blob/download", handlers.ImageLayerBlobDownload)
 		dip.GET("/api/docker/blob/chunk/pre", handlers.UploadBlobChunkInitiate)
 		dip.POST("/api/docker/blob/chunk", handlers.UploadBlobChunk)
 		dip.POST("/api/docker/merge", handlers.MergeImage)

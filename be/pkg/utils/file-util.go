@@ -85,7 +85,7 @@ func CreateFile(filename string) (*os.File, error) {
 
 func CheckFileMd5(filePath, md5Hash string) bool {
 	fileMd5 := FileMd5(filePath)
-	fmt.Println("校验md5", filePath, "\n", md5Hash, "\n", fileMd5)
+	fmt.Println("校验md5", filePath, "\n预期值：", md5Hash, "\n计算值：", fileMd5)
 	return md5Hash == fileMd5
 }
 
@@ -97,6 +97,8 @@ func FileMd5(filePath string) string {
 }
 
 func calculateHash(filePath string, hashFunc func() hash.Hash) (string, time.Duration) {
+	// todo 检查文件是否存在
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
@@ -130,4 +132,20 @@ func DataHash(data []byte, hashFunc func() hash.Hash) (string, time.Duration) {
 	hashString := hex.EncodeToString(hashInBytes)
 
 	return hashString, elapsed
+}
+
+func CreateFileWithData(fileName string, data []byte) error {
+
+	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 写入数据
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+
+	return nil
 }
