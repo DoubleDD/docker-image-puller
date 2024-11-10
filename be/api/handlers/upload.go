@@ -1,66 +1,16 @@
 package handlers
 
 import (
-	"docker-image-handler/pkg/registry"
 	"docker-image-handler/pkg/utils"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
-
-// ImageLayerBlobDownload 镜像文件下载
-func ImageLayerBlobDownload(c *gin.Context) {
-	image := c.Query("image")
-	digest := c.Query("digest")
-	// 获取查询参数 "size" 并尝试转换为 int64
-	sizeStr := c.Query("size")
-	// 将字符串转换为 int64，设置基数为 10，位数为 64
-	size, err := strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil {
-		// 处理转换错误，例如返回400响应
-		c.JSON(400, gin.H{"error": "Invalid size parameter"})
-		return
-	}
-
-	reg, repo, tag, err := utils.ParseImageAddress(image)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	username := c.Query("username")
-	password := c.Query("password")
-
-	// 创建下载任务
-	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
-
-	// 设置SSE响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
-
-	// 发送任务ID
-	c.SSEvent("taskId", taskID)
-	c.Writer.Flush()
-
-	client := registry.NewDockerRegistryClient(reg, registry.WithAuth(username, password))
-
-	// 开始下载
-	err = client.DownloadBlobWithSSE(repo, tag, digest, size, c)
-	if err != nil {
-		c.SSEvent("error", err.Error())
-		c.Writer.Flush()
-		return
-	}
-}
 
 // UploadBlobChunkInitiate 上传预检
 func UploadBlobChunkInitiate(c *gin.Context) {

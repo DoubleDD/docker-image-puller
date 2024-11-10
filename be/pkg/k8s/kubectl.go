@@ -54,10 +54,8 @@ func GetImages() map[string][]string {
 					result[namespace] = append(result[namespace], img)
 				}
 			}
-
 		}
 	}
-	fmt.Println(result)
 	return result
 }
 
