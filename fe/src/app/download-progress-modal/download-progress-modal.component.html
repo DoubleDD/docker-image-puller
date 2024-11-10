@@ -1,0 +1,84 @@
+<div
+  *ngIf="visible"
+  class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+>
+  <div class="bg-white p-6 rounded-lg shadow-lg w-3/4">
+    <h2 class="text-lg font-semibold mb-4">
+      Download Progress for <span class="text-blue-800">{{ imageName }}</span>
+    </h2>
+    <div class="flex flex-col space-y-1">
+      <div class="flex h-4 rounded">
+        <div
+          *ngFor="let layer of layers; let i = index"
+          class="h-full relative"
+          [style.width.%]="getLayerWidth(layer)"
+          [ngClass]="{
+            'bg-blue-100': i === 0,
+            'bg-green-100': i === 1,
+            'bg-yellow-100': i === 2,
+            'bg-red-100': i === 3,
+            'bg-purple-100': i === 4,
+            'bg-indigo-100': i === 5,
+          }"
+        >
+          <div
+            class="h-full transition-all duration-300 ease-in-out"
+            [style.width.%]="layer.progress"
+            [ngClass]="{
+              'bg-blue-500': i === 0,
+              'bg-green-500': i === 1,
+              'bg-yellow-500': i === 2,
+              'bg-red-500': i === 3,
+              'bg-purple-500': i === 4,
+              'bg-indigo-500': i === 5,
+            }"
+          ></div>
+        </div>
+      </div>
+      <div class="flex h-4 rounded">
+        <div
+          *ngFor="let layer of layers; let i = index"
+          class="h-full relative"
+          [style.width.%]="getLayerWidth(layer)"
+          [ngClass]="{
+            'bg-blue-100': i === 0,
+            'bg-green-100': i === 1,
+            'bg-yellow-100': i === 2,
+            'bg-red-100': i === 3,
+            'bg-purple-100': i === 4,
+            'bg-indigo-100': i === 5,
+          }"
+        >
+          <div
+            class="h-full transition-all duration-300 ease-in-out"
+            [style.width.%]="layer.uProgress"
+            [ngClass]="{
+              'bg-blue-500': i === 0,
+              'bg-green-500': i === 1,
+              'bg-yellow-500': i === 2,
+              'bg-red-500': i === 3,
+              'bg-purple-500': i === 4,
+              'bg-indigo-500': i === 5,
+            }"
+          ></div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 flex justify-center">
+      <button
+        (click)="hide()"
+        [disabled]="!allLayersCompleted"
+        class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm"
+      >
+        <span *ngIf="allLayersCompleted" class="flex items-center gap-2">
+          <i class="fas fa-ok"></i>
+          Done!
+        </span>
+        <span *ngIf="!allLayersCompleted" class="flex items-center gap-2">
+          <i class="fas fa-spinner fa-spin"></i>
+          Processing...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

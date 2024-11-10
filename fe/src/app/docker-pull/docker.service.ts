@@ -41,7 +41,7 @@ export class DockerService {
     // 如果没有缓存或缓存已过期，则从服务器获取
     return this.http
       .get<Manifest>(
-        `${proxy_server}/dip/api/docker/manifest?image=${imageUrl}`,
+        `${proxy_server}/proxy/api/docker/manifest?image=${imageUrl}`,
       )
       .pipe(
         tap((manifest) => {
@@ -121,7 +121,7 @@ export class DockerService {
       let isComplete = false;
 
       const eventSource = new EventSource(
-        `${proxy_server}/dip/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`,
+        `${proxy_server}/proxy/api/docker/blob/download?image=${imageUrl}&digest=${digest}&size=${size}`,
         { withCredentials: true },
       );
 

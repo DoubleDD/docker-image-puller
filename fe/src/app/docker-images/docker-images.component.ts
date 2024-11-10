@@ -1,8 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, HostListener } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  HostListener,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 import { Router } from '@angular/router';
+import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
+import { DownloadProgressModalComponent } from '../download-progress-modal/download-progress-modal.component';
 
 export interface NsImages {
   ns: string;
@@ -17,11 +24,19 @@ export interface Image {
 @Component({
   selector: 'app-docker-images',
   standalone: true,
-  imports: [CommonModule, FormsModule, stringLengthPipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    stringLengthPipe,
+    DownloadProgressModalComponent,
+  ],
   templateUrl: './docker-images.component.html',
   styleUrl: './docker-images.component.scss',
 })
-export class DockerImagesComponent implements OnInit {
+export class DockerImagesComponent implements OnInit, AfterViewInit {
+  @ViewChild(DownloadProgressModalComponent)
+  downloadProgressModal!: DownloadProgressModalComponent;
+
   isProcessing = false;
   error = '';
   keyword = '';
@@ -74,6 +89,8 @@ export class DockerImagesComponent implements OnInit {
     );
   }
 
+  ngAfterViewInit(): void {}
+
   @HostListener('document:keydown.control.k', ['$event'])
   onKeydownHandler(event: KeyboardEvent) {
     event.preventDefault(); // 阻止默认行为
@@ -114,6 +131,49 @@ export class DockerImagesComponent implements OnInit {
   goToDetail(imageName: string) {
     this.router.navigate(['/detail'], {
       queryParams: { repository: imageName },
+    });
+  }
+
+  pull(event: Event, imageName: string) {
+    event.stopPropagation();
+
+    // 模拟镜像分层数据
+    const layers = [
+      { size: 100, progress: 0, uProgress: 0 },
+      { size: 200, progress: 0, uProgress: 0 },
+      { size: 300, progress: 0, uProgress: 0 },
+      { size: 400, progress: 0, uProgress: 0 },
+      { size: 500, progress: 0, uProgress: 0 },
+      { size: 600, progress: 0, uProgress: 0 },
+    ];
+
+    const totalSize = layers.reduce((sum, layer) => sum + layer.size, 0);
+
+    // 显示弹窗
+    this.downloadProgressModal.layers = layers;
+    this.downloadProgressModal.totalSize = totalSize;
+    this.downloadProgressModal.imageName = imageName;
+    this.downloadProgressModal.show();
+
+    // 模拟下载进度更新
+    layers.forEach((layer, index) => {
+      const interval = setInterval(() => {
+        if (layer.progress < 100) {
+          layer.progress += 20;
+          this.downloadProgressModal.updateLayerProgress(index, layer.progress);
+        }
+        if (layer.uProgress < 100) {
+          layer.uProgress += 10;
+          this.downloadProgressModal.updateLayerUploadProgress(
+            index,
+            layer.uProgress,
+          );
+        }
+
+        if (layer.uProgress >= 100 && layer.progress >= 100) {
+          clearInterval(interval);
+        }
+      }, 500);
     });
   }
 }
