@@ -77,9 +77,11 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
           arr.push({
             ns: key,
             color: this.getRandomColor(),
-            images: (json[key] as string[]).map((e) => {
-              const iarr = e.split(';');
-              return { name: iarr[0], description: e, tag: iarr[1] };
+            images: (json[key] as string[]).map((imageUrl) => {
+              const item = parseDockerImage(imageUrl);
+              const imageName = item.image;
+              const tag = item.tag || '';
+              return { name: imageName, description: imageUrl, tag: tag };
             }),
           });
         }
@@ -130,7 +132,12 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
 
   goToDetail(imageName: string) {
     this.router.navigate(['/detail'], {
-      queryParams: { repository: imageName },
+      queryParams: {
+        repository: imageName.replace(
+          '172.27.35.4:5000',
+          'registry.cn-zhangjiakou.aliyuncs.com',
+        ),
+      },
     });
   }
 
@@ -176,4 +183,36 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       }, 500);
     });
   }
+}
+
+interface DockerImage {
+  registry?: string;
+  repository: string;
+  image: string;
+  tag?: string;
+  digest?: string;
+}
+
+function parseDockerImage(imageUrl: string): DockerImage {
+  const result: DockerImage = {
+    repository: '',
+    image: '',
+  };
+
+  // 匹配 Docker 镜像地址的正则表达式
+  const dockerImageRegex =
+    /^(?:(?<registry>[^/]+)\/)?(?:(?<repository>[^/:]+)\/)?(?<image>[^:@]+)(?::(?<tag>[^:@]+))?(?:@(?<digest>[^:@]+))?$/;
+  const match = imageUrl.match(dockerImageRegex);
+
+  if (match) {
+    result.registry = match.groups?.['registry'];
+    result.repository = match.groups?.['repository'] || '';
+    result.image = match.groups?.['image'] || '';
+    result.tag = match.groups?.['tag'];
+    result.digest = match.groups?.['digest'];
+  } else {
+    throw new Error('Invalid Docker image format');
+  }
+
+  return result;
 }
