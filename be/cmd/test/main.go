@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
-	k8s.GetImages()
+	// k8s.GetImages()
 	// utils.MergeFiles()
+	k8s.RolloutDeployment("chat2db", "")
 }

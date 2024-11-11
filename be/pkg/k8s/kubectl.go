@@ -55,8 +55,12 @@ func GetImages() map[string][]string {
 	return result
 }
 
-func RolloutDeployment(name string) {
-
+// 滚动更新服务
+func RolloutDeployment(name string, namespace string) {
+	if namespace == "" {
+		namespace = "default"
+	}
+	ExecCmd("kubectl", "rollout", "restart", "deployment", name, "-n", namespace)
 }
 
 // 辅助函数：检查切片中是否包含某个元素
