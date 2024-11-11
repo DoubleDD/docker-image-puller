@@ -55,9 +55,10 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       ns: 'ylns',
       images: [
         {
-          name: 'ylns/nginx-empty',
+          name: 'busybox',
           tag: '1.19.2',
-          description: 'nginx-empty',
+          description:
+            '172.27.35.4:5000/yunli_mid_platform/busybox:latest-arm64',
         },
       ],
     },
@@ -68,6 +69,9 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
     this.namespace = urlParams.get('namespace') || '';
+    //if (this.namespace) {
+    //  return;
+    //}
     // 获取镜像列表
     fetch(`/dip/api/docker/images?namespace=${this.namespace}`).then(
       async (resp) => {
