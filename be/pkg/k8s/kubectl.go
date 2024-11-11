@@ -60,7 +60,8 @@ func RolloutDeployment(name string, namespace string) {
 	if namespace == "" {
 		namespace = "default"
 	}
-	ExecCmd("kubectl", "rollout", "restart", "deployment", name, "-n", namespace)
+	out, _, _ := ExecCmd("kubectl", "rollout", "restart", "deployment", name, "-n", namespace)
+	fmt.Println(out)
 }
 
 // 辅助函数：检查切片中是否包含某个元素
@@ -73,6 +74,7 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
+// 执行命令
 func ExecCmd(name string, args ...string) (string, string, error) {
 	cmd := exec.Command(name, args...)
 	// 继承当前环境变量
