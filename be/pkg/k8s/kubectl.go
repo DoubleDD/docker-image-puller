@@ -14,7 +14,7 @@ type NamespaceImages struct {
 }
 
 func GetImages() map[string][]string {
-	kubectl := "/Users/kedong/.local/bin/kubectl"
+	kubectl := "/usr/bin/kubectl"
 	jsonpath := "{range .items[*]}{.metadata.namespace}{\"\\t\"}{range .spec.containers[*]}{.image}{\",\"}{end}{\"\\n\"}{end} | sort | uniq"
 
 	// 执行 kubectl 命令获取所有 Pod 的 JSON 数据

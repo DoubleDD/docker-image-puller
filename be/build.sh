@@ -1,7 +1,13 @@
 #!/bin/bash
 
 # 定义目标平台
-platforms=("linux/amd64" "linux/arm64" "windows/amd64" "darwin/amd64" "darwin/arm64")
+platforms=(
+	# "linux/amd64"
+	"linux/arm64"
+	"windows/amd64"
+	# "darwin/amd64"
+	"darwin/arm64"
+)
 
 # 定义输出目录
 output_dir="build"
