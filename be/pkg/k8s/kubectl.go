@@ -16,20 +16,12 @@ type NamespaceImages struct {
 
 func GetImages() map[string][]string {
 	jsonpath := "{range .items[*]}{.metadata.namespace}{\"\\t\"}{range .spec.initContainers[*]}{.image}{\",\"}{end}{\"\\n\"}{end} | sort |uniq"
-
 	// 执行 kubectl 命令获取所有 Pod 的 JSON 数据
-	cmd := exec.Command("kubectl", "get", "pods", "--all-namespaces", "-o", fmt.Sprintf("jsonpath=%s", jsonpath))
-	// 继承当前环境变量
-	cmd.Env = append(os.Environ(), "PATH="+os.Getenv("PATH"))
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
+	outputStr, _, err := ExecCmd("kubectl", "get", "pods", "--all-namespaces", "-o", fmt.Sprintf("jsonpath=%s", jsonpath))
 	if err != nil {
 		fmt.Printf("命令执行出错: %s\n", err)
 		return nil
 	}
-	outputStr := out.String()
 
 	// 创建一个 map 来存储结果
 	result := make(map[string][]string)
@@ -63,6 +55,10 @@ func GetImages() map[string][]string {
 	return result
 }
 
+func RolloutDeployment(name string) {
+
+}
+
 // 辅助函数：检查切片中是否包含某个元素
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
@@ -71,4 +67,22 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func ExecCmd(name string, args ...string) (string, string, error) {
+	cmd := exec.Command(name, args...)
+	// 继承当前环境变量
+	cmd.Env = append(os.Environ(), "PATH="+os.Getenv("PATH"))
+
+	var out bytes.Buffer
+	var stderror bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderror
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("命令执行出错: %s\n", err)
+		return "", "", err
+	}
+	outputStr := out.String()
+	return outputStr, stderror.String(), nil
 }
