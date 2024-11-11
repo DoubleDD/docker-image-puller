@@ -56,12 +56,16 @@ func GetImages() map[string][]string {
 }
 
 // 滚动更新服务
-func RolloutDeployment(name string, namespace string) {
+func RolloutDeployment(name string, namespace string) string {
 	if namespace == "" {
 		namespace = "default"
 	}
-	out, _, _ := ExecCmd("kubectl", "rollout", "restart", "deployment", name, "-n", namespace)
+	out, _, err := ExecCmd("kubectl", "rollout", "restart", "deployment", name, "-n", namespace)
+	if err != nil {
+		return err.Error()
+	}
 	fmt.Println(out)
+	return out
 }
 
 // 辅助函数：检查切片中是否包含某个元素
