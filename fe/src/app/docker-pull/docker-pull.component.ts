@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { DockerService } from './docker.service';
 import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 import { MathFloorPipe } from '../shared/pipes/math-floor.pipe';
+import { MessageService } from '../message.service';
 
 export interface Layer {
   digest: string;
@@ -44,8 +45,10 @@ export class DockerPullComponent implements OnInit {
   isProcessing = false;
   error = '';
   configContent: any = null;
-
-  constructor(private dockerService: DockerService) {}
+  constructor(
+    private dockerService: DockerService,
+    private messageService: MessageService,
+  ) {}
   debug = false;
 
   ngOnInit(): void {
@@ -121,6 +124,9 @@ export class DockerPullComponent implements OnInit {
         return firstValueFrom(
           this.dockerService.mergeImage(this.imageUrl, this.manifest),
         );
+      })
+      .then((r) => {
+        this.messageService.publish('镜像推送成功!', true);
       })
       .catch((error) => {
         // 捕获任何一个任务失败的情况

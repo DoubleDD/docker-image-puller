@@ -8,8 +8,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 import { DownloadProgressModalComponent } from '../download-progress-modal/download-progress-modal.component';
+import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 
 export interface NsImages {
   ns: string;
@@ -40,8 +40,8 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   isProcessing = false;
   error = '';
   keyword = '';
-  data: NsImages[] = [];
-  nsImages: NsImages[] = [
+  nsImages: NsImages[] = [];
+  data: NsImages[] = [
     {
       ns: 'default',
       color: this.getRandomColor(),
@@ -73,6 +73,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     this.namespace = urlParams.get('namespace') || '';
     const debug = urlParams.get('d') || '';
     if (debug) {
+      this.nsImages = [...this.data];
       return;
     }
     // 获取镜像列表
