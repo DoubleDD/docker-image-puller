@@ -1,25 +1,55 @@
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen py-8">
   <div class="container mx-auto p-4 max-w-full">
-    <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-100">
+    <div class="shadow-lg rounded-xl p-8">
       <!-- search -->
       <div class="flex items-center gap-3 mb-8">
         <i class="fab fa-docker text-3xl text-blue-500"></i>
-        <h2 class="text-2xl font-bold text-gray-800">Docker Image Pull</h2>
+        <h2 class="text-2xl font-bold text-white">Docker Image Pull</h2>
       </div>
       <!-- Image URL Input -->
-      <div class="flex gap-4 mb-8">
-        <input [(ngModel)]="imageUrl" (keyup.enter)="fetchManifest()"
-          class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="Enter docker image URL (e.g., nginx:latest)" [disabled]="isProcessing" />
-        <button (click)="fetchManifest()" [disabled]="!imageUrl || isProcessing"
-          class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm">
+
+      <div class="flex gap-4 mb-8 relative">
+        <!-- 搜索图标 -->
+        <div
+          class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"
+        >
+          <svg
+            class="w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            ></path>
+          </svg>
+        </div>
+
+        <!-- 搜索框 -->
+        <input
+          [(ngModel)]="imageUrl"
+          (keyup.enter)="fetchManifest()"
+          type="text"
+          class="flex-1 pl-10 px-4 py-3 bg-gray-900 rounded-lg focus:outline-none focus:ring-1 focus:ring-white focus:border-transparent transition-all"
+          placeholder="Enter docker image URL (e.g., nginx:latest)"
+          [disabled]="isProcessing"
+        />
+        <button
+          (click)="fetchManifest()"
+          [disabled]="!imageUrl || isProcessing"
+          class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-black transition-colors duration-200 shadow-sm"
+        >
           <span *ngIf="!isProcessing" class="flex items-center gap-2">
             @if (debug) {
-            <i class="fas fa-search"></i>
-            Fetch Manifest
+              <i class="fas fa-search"></i>
+              Fetch Manifest
             } @else {
-            <i class="fas fa-download"></i>
-            Pull
+              <i class="fas fa-download"></i>
+              Pull
             }
           </span>
           <span *ngIf="isProcessing" class="flex items-center gap-2">
@@ -29,8 +59,10 @@
         </button>
       </div>
       <!-- Error Message -->
-      <div *ngIf="error"
-        class="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+      <div
+        *ngIf="error"
+        class="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2"
+      >
         <i class="fas fa-exclamation-circle text-red-500"></i>
         {{ error }}
       </div>
@@ -39,48 +71,50 @@
       <div *ngIf="manifest" class="space-y-8">
         <!-- Config Info -->
         <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-gray-700 mb-4">
-            Image Configuration
-          </h3>
-          <div class="border border-gray-200 rounded-lg p-5">
+          <h3 class="text-lg font-semibold mb-4">Image Configuration</h3>
+          <div class="border border-gray-800 rounded-lg p-5">
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-2">
                 <i class="fas fa-cog text-gray-400"></i>
-                <code class="text-sm bg-gray-50 px-3 py-1.5 rounded-md font-mono">
+                <code
+                  class="text-sm bg-gray-900 px-3 py-1.5 rounded-md font-mono"
+                >
                   {{ manifest.config.digest | slice: 7 : 19 }}...
                 </code>
               </div>
-              <span class="text-sm text-gray-500">
+              <span class="text-sm text-gray-400">
                 {{ manifest.config.size | fileSize }}
               </span>
             </div>
 
             <!-- Config Content -->
             <div *ngIf="configContent" class="mt-4 space-y-4">
-              <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="bg-gray-900 p-4 rounded-lg">
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <p class="text-sm font-medium text-gray-600">
+                    <p class="text-sm font-medium text-gray-100">
                       Architecture
                     </p>
-                    <p class="text-sm text-gray-800">
+                    <p class="text-sm text-gray-400">
                       {{ configContent.architecture }}
                     </p>
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-gray-600">OS</p>
-                    <p class="text-sm text-gray-800">{{ configContent.os }}</p>
+                    <p class="text-sm font-medium text-gray-100">OS</p>
+                    <p class="text-sm text-gray-400">{{ configContent.os }}</p>
                   </div>
                 </div>
               </div>
 
               <!-- Exposed Ports -->
               <div *ngIf="configContent.config?.ExposedPorts" class="space-y-2">
-                <p class="text-sm font-medium text-gray-600">Exposed Ports</p>
-                <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm font-medium text-gray-100">Exposed Ports</p>
+                <div class="bg-gray-900 p-4 rounded-lg">
                   <div class="grid grid-cols-3 gap-2">
-                    <div *ngFor="let port of getExposedPorts()"
-                      class="text-sm text-gray-800 bg-blue-50 px-3 py-1 rounded-md">
+                    <div
+                      *ngFor="let port of getExposedPorts()"
+                      class="text-sm text-gray-400 px-3 py-1 rounded-md"
+                    >
                       {{ port }}
                     </div>
                   </div>
@@ -89,11 +123,11 @@
 
               <!-- Working Directory -->
               <div *ngIf="configContent.config?.WorkingDir" class="space-y-2">
-                <p class="text-sm font-medium text-gray-600">
+                <p class="text-sm font-medium text-gray-100">
                   Working Directory
                 </p>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                  <p class="text-sm text-gray-800 font-mono">
+                <div class="bg-gray-900 p-4 rounded-lg">
+                  <p class="text-sm text-gray-400 font-mono">
                     {{ configContent.config.WorkingDir }}
                   </p>
                 </div>
@@ -104,14 +138,18 @@
 
         <!-- Existing Layers List -->
         <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-gray-700 mb-4">Image Layers</h3>
-          <div *ngFor="let layer of layers"
-            class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow duration-200">
+          <h3 class="text-lg font-semibold text-gray-100 mb-4">Image Layers</h3>
+          <div
+            *ngFor="let layer of layers"
+            class="border border-gray-800 rounded-lg p-5 hover:shadow-lg transition-shadow duration-200"
+          >
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2">
                   <i class="fas fa-layer-group text-gray-400"></i>
-                  <code class="text-sm bg-gray-50 px-3 py-1.5 rounded-md font-mono">
+                  <code
+                    class="text-sm bg-gray-900 px-3 py-1.5 rounded-md font-mono"
+                  >
                     {{ layer.digest | slice: 7 : 19 }}...
                   </code>
                 </div>
@@ -119,49 +157,59 @@
                   {{ layer.size | fileSize }}
                 </span>
               </div>
-              <span class="px-3 py-1 rounded-full text-sm font-medium" [ngClass]="{
+              <span
+                class="px-3 py-1 rounded-full text-sm font-medium"
+                [ngClass]="{
                   'bg-blue-100 text-blue-700': layer.status === 'downloading',
                   'bg-green-100 text-green-700': layer.status === 'completed',
                   'bg-red-100 text-red-700': layer.status === 'error',
-                  'bg-yellow-100 text-yellow-700': layer.status === 'uploading',
-                }">
+                  'bg-yellow-100 text-yellow-700': layer.status === 'pending',
+                }"
+              >
                 {{ layer.status }}
               </span>
             </div>
 
             <!-- Download Progress -->
             <div class="mb-4">
-              <div class="flex justify-between text-xs text-gray-600 mb-2">
+              <div class="flex justify-between text-xs text-gray-400 mb-2">
                 <span>Download Progress</span>
                 <span>{{ layer.downloaded | fileSize }}</span>
               </div>
-              <div class="w-full bg-gray-100 rounded-full h-2">
-                <div class="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                  [style.width]="layer.downloadProgress + '%'"></div>
+              <div class="w-full bg-gray-600 rounded-full h-2">
+                <div
+                  class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  [style.width]="layer.downloadProgress + '%'"
+                ></div>
               </div>
             </div>
 
             <!-- Upload Progress -->
             <div>
-              <div class="flex justify-between text-xs text-gray-600 mb-2">
+              <div class="flex justify-between text-xs text-gray-400 mb-2">
                 <span>Upload Progress</span>
                 <span>{{ layer.uploadProgress | mathFloor }}%</span>
               </div>
-              <div class="w-full bg-gray-100 rounded-full h-2">
-                <div class="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  [style.width]="layer.uploadProgress + '%'"></div>
+              <div class="w-full bg-gray-600 rounded-full h-2">
+                <div
+                  class="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  [style.width]="layer.uploadProgress + '%'"
+                ></div>
               </div>
             </div>
           </div>
         </div>
 
         @if (debug) {
-        <!-- Pull Button -->
-        <button (click)="handlePullImage()" [disabled]="isProcessing || layers.length === 0"
-          class="w-full px-6 py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 font-medium">
-          <i class="fas fa-download"></i>
-          Pull and Process Image
-        </button>
+          <!-- Pull Button -->
+          <button
+            (click)="handlePullImage()"
+            [disabled]="isProcessing || layers.length === 0"
+            class="w-full px-6 py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-black transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 font-medium"
+          >
+            <i class="fas fa-download"></i>
+            Pull and Push Image
+          </button>
         }
       </div>
     </div>
