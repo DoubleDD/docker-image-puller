@@ -44,6 +44,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   nsImages: NsImages[] = [
     {
       ns: 'default',
+      color: this.getRandomColor(),
       images: [
         { name: 'nginx', description: 'nginx' },
         { name: 'ubuntu', description: 'ubuntu' },
@@ -53,6 +54,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     },
     {
       ns: 'ylns',
+      color: this.getRandomColor(),
       images: [
         {
           name: 'busybox',
@@ -69,24 +71,30 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
     this.namespace = urlParams.get('namespace') || '';
-    //if (this.namespace) {
-    //  return;
-    //}
+    const debug = urlParams.get('d') || '';
+    if (debug) {
+      return;
+    }
     // 获取镜像列表
     fetch(`/dip/api/docker/images?namespace=${this.namespace}`).then(
       async (resp) => {
         const json = await resp.json();
         const arr: NsImages[] = [];
         for (const key in json) {
+          if (this.namespace != '' && this.namespace != key) {
+            continue;
+          }
           arr.push({
             ns: key,
             color: this.getRandomColor(),
-            images: (json[key] as string[]).map((imageUrl) => {
-              const item = parseDockerImage(imageUrl);
-              const imageName = item.image;
-              const tag = item.tag || '';
-              return { name: imageName, description: imageUrl, tag: tag };
-            }),
+            images: (json[key] as string[])
+              .map((imageUrl) => {
+                const item = parseDockerImage(imageUrl);
+                const imageName = item.image;
+                const tag = item.tag || '';
+                return { name: imageName, description: imageUrl, tag: tag };
+              })
+              .sort((a, b) => a.name.localeCompare(b.name)),
           });
         }
         this.data = [...arr];
@@ -128,7 +136,9 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       const images = v.images.filter(
         (e) => e.description.indexOf(this.keyword) > -1,
       );
-      result.push({ ns: v.ns, images });
+      if (images.length > 0) {
+        result.push({ ns: v.ns, color: v.color, images });
+      }
     });
 
     this.nsImages = result;

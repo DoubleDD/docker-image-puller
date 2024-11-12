@@ -4,102 +4,77 @@
       <!-- search -->
       <div class="flex items-center gap-3 mb-8">
         <i class="fab fa-docker text-3xl text-blue-500"></i>
-        <h2 class="text-2xl font-bold text-gray-800">K8S Images </h2>
+        <h2 class="text-2xl font-bold text-gray-800">K8S Images</h2>
       </div>
       <!-- Image URL Input -->
       <div class="flex gap-4 mb-8 relative">
         <!-- 搜索图标 -->
-        <div
-          class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"
-        >
-          <svg
-            class="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </div>
 
         <!-- 搜索框 -->
-        <input
-          [(ngModel)]="keyword"
-          (input)="search()"
-          type="text"
+        <input [(ngModel)]="keyword" (input)="search()" type="text"
           class="flex-1 pl-10 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="Enter docker image URL (e.g., nginx:latest)"
-          [disabled]="isProcessing"
-        />
+          placeholder="Enter docker image URL (e.g., nginx:latest)" [disabled]="isProcessing" />
       </div>
 
       <!-- Error Message -->
-      <div
-        *ngIf="error"
-        class="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2"
-      >
+      <div *ngIf="error"
+        class="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
         <i class="fas fa-exclamation-circle text-red-500"></i>
         {{ error }}
       </div>
 
       <div class="flex flex-col space-y-4">
         @for (nsImage of nsImages; track $index) {
-          <div class="border border-gray-300 rounded-xl p-4">
-            <!-- 命名空间的标签行 -->
-            <div class="mb-4">
-              <span
-                class="inline-block bg-gray-200 text-gray-800 text-sm font-medium px-2.5 py-1 rounded-full"
-                [ngStyle]="{
+        <div class="border border-gray-300 rounded-xl p-4  ">
+          <!-- 命名空间的标签行 -->
+          <div class="mb-4">
+            <span class="inline-block bg-gray-200 text-gray-800 text-sm font-medium px-2.5 py-1 rounded-full" [ngStyle]="{
                   'background-color': nsImage.color,
                   color: 'white',
-                }"
-              >
-                {{ nsImage.ns }}
-              </span>
-            </div>
-            <div class="grid grid-cols-4 gap-4 mb-8">
-              @for (image of nsImage.images; track $index) {
-                <div
-                  class="bg-white shadow-lg rounded-xl p-4 border border-gray-100 relative cursor-pointer"
-                  (click)="goToDetail(image.description)"
-                >
-                  <div class="flex items-center gap-3">
-                    <i class="fab fa-docker text-3xl text-blue-500"></i>
-                    <h3 class="text-lg font-semibold text-gray-800">
-                      {{ image.name | stringLength }}
-                    </h3>
-                  </div>
-                  <p class="text-sm text-gray-600 mt-2">
-                    {{ image.description }}
-                  </p>
-                  <div class="mt-4">
-                    <span
-                      class="inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded-full"
-                    >
-                      {{ image.tag || "latest" }}
-                    </span>
-                  </div>
-                  <!-- 下载图标 -->
-                  <div class="absolute bottom-4 right-4" (click)="pull($event,image.description)">
-                    <button class="text-blue-500 hover:text-blue-700">
-                      <i class="fas fa-download"></i>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
+                }">
+              {{ nsImage.ns }}
+            </span>
           </div>
+          <div class="grid grid-cols-4 gap-4 mb-8">
+            @for (image of nsImage.images; track $index) {
+            <div class="hover:bg-green-50 transform hover:scale-105 transition-all duration-300     bg-white shadow-lg rounded-xl p-4 border border-gray-100 relative cursor-pointer"
+              (click)="goToDetail(image.description)">
+              <div class="flex items-center gap-3">
+                <i class="fab fa-docker text-3xl text-blue-500"></i>
+                <h3 class="text-lg font-semibold text-gray-800">
+                  {{ image.name | stringLength }}
+                </h3>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">
+                {{ image.description }}
+              </p>
+              <div class="mt-4">
+                <span
+                  class="inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded-full">
+                  {{ image.tag || "latest" }}
+                </span>
+              </div>
+              <!-- 下载图标 -->
+              <div class="absolute bottom-4 right-4" (click)="pull($event, image.description)">
+                <button class="text-blue-500 hover:text-blue-700">
+                  <i class="fas fa-download"></i>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
         }
       </div>
     </div>
   </div>
-
 
   <!-- 下载进度弹窗 -->
   <app-download-progress-modal></app-download-progress-modal>
