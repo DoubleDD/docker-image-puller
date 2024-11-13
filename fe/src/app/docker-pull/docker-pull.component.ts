@@ -55,6 +55,7 @@ export class DockerPullComponent implements OnInit {
     this.imageUrl =
       urlParams.get('repository') ||
       'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
+    this.fetchManifest();
   }
 
   async fetchManifest() {
