@@ -49,11 +49,9 @@ export class DockerPullComponent implements OnInit {
     private dockerService: DockerService,
     private messageService: MessageService,
   ) {}
-  debug = false;
 
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
-    this.debug = urlParams.get('debug') === 'true';
     this.imageUrl =
       urlParams.get('repository') ||
       'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
@@ -88,11 +86,6 @@ export class DockerPullComponent implements OnInit {
           this.manifest.config.size,
         ),
       );
-
-      if (!this.debug) {
-        // 下载镜像各个层的内容
-        this.handlePullImage();
-      }
     } catch (error: any) {
       this.error = error.message || 'Failed to fetch manifest';
       console.error(error);

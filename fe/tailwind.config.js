@@ -6,6 +6,15 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        darkRed: "rgb(118, 0, 0)",
+        darkOrange: "rgb(184, 87, 3)",
+        darkYellow: "#A68A1F",
+        darkGreen: "rgb(0, 118, 7)",
+        darkBlue: "rgb(7, 35, 120)",
+        darkIndigo: "rgb(0, 121, 158)",
+        darkPurple: "#5b0085",
+      },
       boxShadow: {
         "custom-light": "0 4px 6px rgba(255, 255, 255, 0.3)", // 白色阴影
         "custom-dark": "0 4px 6px rgba(0, 0, 0, 0.5)", // 黑色阴影

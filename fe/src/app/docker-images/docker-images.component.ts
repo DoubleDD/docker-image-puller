@@ -37,6 +37,16 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   @ViewChild(DownloadProgressModalComponent)
   downloadProgressModal!: DownloadProgressModalComponent;
 
+  // 定义 Tailwind CSS 的暗色背景颜色类数组
+  private colors = [
+    'bg-darkGreen',
+    'bg-darkOrange',
+    'bg-darkYellow',
+    'bg-darkBlue',
+    'bg-darkIndigo',
+    'bg-darkPurple',
+    'bg-darkRed',
+  ];
   isProcessing = false;
   error = '';
   keyword = '';
@@ -44,7 +54,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   data: NsImages[] = [
     {
       ns: 'default',
-      color: this.getRandomColor(),
+      color: this.getRandomColor(0),
       images: [
         { name: 'nginx', description: 'nginx' },
         { name: 'ubuntu', description: 'ubuntu' },
@@ -54,7 +64,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     },
     {
       ns: 'ylns',
-      color: this.getRandomColor(),
+      color: this.getRandomColor(1),
       images: [
         {
           name: 'busybox',
@@ -81,13 +91,14 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       async (resp) => {
         const json = await resp.json();
         const arr: NsImages[] = [];
+        let i = 0;
         for (const key in json) {
           if (this.namespace != '' && this.namespace != key) {
             continue;
           }
           arr.push({
             ns: key,
-            color: this.getRandomColor(),
+            color: this.getRandomColor(i++),
             images: (json[key] as string[])
               .map((imageUrl) => {
                 const item = parseDockerImage(imageUrl);
@@ -113,13 +124,8 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   }
 
   // 生成随机颜色的方法
-  getRandomColor() {
-    const letters = '0123456789ABCDEF';
-    let color = '#';
-    for (let i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
+  getRandomColor(index: number) {
+    return this.colors[index % this.colors.length];
   }
 
   focusSearchInput() {
