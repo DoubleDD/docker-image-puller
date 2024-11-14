@@ -126,24 +126,30 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
         const arr: NsImages[] = [];
         let i = 0;
         for (const key of json) {
+          const dps: Deployment[] = [];
+          (key.Deployments as any[]).forEach((deployment) => {
+            const imageUrl = deployment.ImageName;
+            const imageArr = imageUrl.split('\n');
+            for (const image of imageArr) {
+              const item = parseDockerImage(image);
+              const imageName = item.image;
+              const tag = item.tag || '';
+              const dp = {
+                name: deployment.Name,
+                image: {
+                  name: imageName,
+                  description: image,
+                  tag: tag,
+                },
+              };
+              dps.push(dp);
+            }
+          });
+
           arr.push({
             ns: key.Namespace,
             color: this.getRandomColor(i++),
-            deployments: (key.Deployments as any[])
-              .map((deployment) => {
-                const item = parseDockerImage(deployment.ImageName);
-                const imageName = item.image;
-                const tag = item.tag || '';
-                return {
-                  name: deployment.Name,
-                  image: {
-                    name: imageName,
-                    description: deployment.ImageName,
-                    tag: tag,
-                  },
-                };
-              })
-              .sort((a, b) => a.name.localeCompare(b.name)),
+            deployments: dps.sort((a, b) => a.name.localeCompare(b.name)),
           });
         }
         this.data = [...arr];
