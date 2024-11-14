@@ -8,6 +8,11 @@ import (
 )
 
 func GetDockerImages(c *gin.Context) {
-	images := k8s.GetImages()
+	ns := c.Query("namespace")
+	images, err := k8s.GetImages(ns)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
 	c.JSON(http.StatusOK, images)
 }
