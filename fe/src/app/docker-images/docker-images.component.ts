@@ -124,8 +124,9 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   }
 
   // 生成随机颜色的方法
-  getRandomColor(index: number) {
-    return this.colors[index % this.colors.length];
+  getRandomColor(index?: number) {
+    const random = Math.floor(Math.random() * 100) + 1;
+    return this.colors[(index || random) % this.colors.length];
   }
 
   focusSearchInput() {

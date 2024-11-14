@@ -112,8 +112,6 @@ export class DockerPullComponent implements OnInit {
       .then(() => {
         console.log('completedLayerCount:', this.completedLayerCount);
 
-        console.log('开始执行合并任务');
-
         // 确保所有任务完成后再执行合并镜像
         return firstValueFrom(
           this.dockerService.mergeImage(this.imageUrl, this.manifest),
@@ -160,8 +158,6 @@ export class DockerPullComponent implements OnInit {
             complete: () => {
               this.updateLayerStatus(layer.digest, 'completed');
               this.completedLayerCount++;
-              console.log('layer完成', layer.digest);
-
               resolve();
             },
           });

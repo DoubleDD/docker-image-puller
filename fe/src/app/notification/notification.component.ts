@@ -18,9 +18,9 @@ export class NotificationComponent {
     this.visible = true;
     this.isSuccess = isSuccess;
 
-    // 自动在3秒后隐藏
+    // 自动在9秒后隐藏
     setTimeout(() => {
       this.visible = false;
-    }, 3000);
+    }, 9000);
   }
 }

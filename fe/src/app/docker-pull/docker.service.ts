@@ -126,7 +126,7 @@ export class DockerService {
       );
 
       eventSource.addEventListener('taskId', (event) => {
-        console.log('Download task created:', event.data);
+        //console.log('Download task created:', event.data);
       });
 
       eventSource.addEventListener('data', async (event) => {
@@ -194,7 +194,7 @@ export class DockerService {
               });
           } else {
             observer.next({ p: 100, u: 100, d: result.size });
-            console.log('startCount', startCount, 'endCount', endCount);
+            //console.log('startCount', startCount, 'endCount', endCount);
 
             if (startCount == endCount) {
               observer.complete();
@@ -307,7 +307,9 @@ export class DockerService {
           return this.http.post('/dip/api/docker/blob/chunk', formData);
         }),
         catchError((error) => {
-          console.error('Error uploading chunk:', error);
+          if (error.message) {
+            console.error('Error uploading chunk:', error);
+          }
           return of(null); // 处理错误并返回一个空值或错误信息
         }),
       ),
@@ -338,12 +340,10 @@ export class DockerService {
         catchError((error: HttpErrorResponse) => {
           // 处理403 Forbidden状态码
           if (error.status === 403) {
-            console.error('Preflight request failed: md5 header is required');
-            return throwError('md5 header is required');
+            return throwError(() => new Error(''));
           }
           // 处理其他错误
-          console.error('Preflight request failed:', error);
-          return throwError('Preflight request failed');
+          return throwError(() => new Error('Preflight request failed'));
         }),
       );
   }

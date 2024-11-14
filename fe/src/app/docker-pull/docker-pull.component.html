@@ -62,7 +62,7 @@
       </div>
 
       <!-- Manifest and Layers -->
-      <div *ngIf="manifest" class="space-y-8">
+      <div *ngIf="manifest" class="space-y-8 manifest">
         <!-- Config Info -->
         <div class="space-y-4">
           <h3 class="text-lg font-semibold mb-4">Manifest</h3>
@@ -103,7 +103,7 @@
                   </div>
                   <div>
                     <p class="text-sm font-medium text-gray-100">Label</p>
-                    <p class="text-sm text-gray-400">{{ configContent.config.Labels.maintainer }}</p>
+                    <p class="text-sm text-gray-400">{{ configContent.config?.Labels?.maintainer }}</p>
                   </div>
                 </div>
               </div>
@@ -180,7 +180,7 @@
               </div>
               <div class="w-full bg-gray-600 rounded-full h-2">
                 <div
-                  class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  class="progress bg-blue-500 h-2 rounded-full transition-all duration-300"
                   [style.width]="layer.downloadProgress + '%'"
                 ></div>
               </div>
@@ -194,7 +194,7 @@
               </div>
               <div class="w-full bg-gray-600 rounded-full h-2">
                 <div
-                  class="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  class="progress bg-green-500 h-2 rounded-full transition-all duration-300"
                   [style.width]="layer.uploadProgress + '%'"
                 ></div>
               </div>

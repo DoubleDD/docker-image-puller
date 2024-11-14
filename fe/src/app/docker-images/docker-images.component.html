@@ -63,7 +63,7 @@
             <div class="grid grid-cols-4 gap-4 mb-8">
               @for (image of nsImage.images; track $index) {
                 <div
-                  class="border border-gray-800 transform hover:scale-105 hover:shadow-custom-light transition-all duration-300 bg-gray-400 rounded-xl p-4 relative cursor-pointer backdrop-filter backdrop-blur-lg bg-opacity-15 text-white"
+                  class="image-item border border-gray-800 transform hover:scale-105 hover:shadow-custom-light transition-all duration-300 bg-gray-400 rounded-xl p-4 relative cursor-pointer backdrop-filter backdrop-blur-lg bg-opacity-15 text-white"
                   (click)="goToDetail(image.description)"
                 >
                   <div class="flex items-center gap-3">
