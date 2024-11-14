@@ -61,26 +61,26 @@
               </span>
             </div>
             <div class="grid grid-cols-4 gap-4 mb-8">
-              @for (image of nsImage.images; track $index) {
+              @for (deployment of nsImage.deployments; track $index) {
                 <div
                   class="image-item border border-gray-800 transform hover:scale-105 hover:shadow-custom-light transition-all duration-300 bg-gray-400 rounded-xl p-4 relative cursor-pointer backdrop-filter backdrop-blur-lg bg-opacity-15 text-white"
-                  (click)="goToDetail(image.description)"
+                  (click)="goToDetail(deployment.name,deployment.image.description)"
                 >
                   <div class="flex items-center gap-3">
                     <i class="fab fa-docker text-3xl text-blue-500"></i>
                     <h3 class="text-lg font-semibold">
-                      {{ image.name | stringLength }}
+                      {{ deployment.name | stringLength }}
                     </h3>
                   </div>
                   <p class="text-sm text-gray-400 mt-2">
-                    {{ image.description }}
+                    {{ deployment.image.description }}
                   </p>
                   <div class="mt-4">
                     <span
                       class="inline-block text-sm font-medium mr-2 px-2.5 py-0.5 rounded-full"
                       [ngClass]="nsImage.color"
                     >
-                      {{ image.tag || "latest" }}
+                      {{ deployment.image.tag || "latest" }}
                     </span>
                   </div>
                   <!-- 下载图标 -->

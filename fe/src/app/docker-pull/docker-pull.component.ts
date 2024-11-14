@@ -39,6 +39,8 @@ export interface Manifest {
 })
 export class DockerPullComponent implements OnInit {
   imageUrl = '';
+  deployment = '';
+  ns = '';
   manifest: Manifest | null = null;
   layers: Layer[] = [];
   completedLayerCount: number = 0;
@@ -52,6 +54,11 @@ export class DockerPullComponent implements OnInit {
 
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
+    const d = urlParams.get('d') || '0';
+    if (d === '1') {
+      this.ns = urlParams.get('ns') || '';
+      this.deployment = urlParams.get('dp') || '';
+    }
     this.imageUrl =
       urlParams.get('repository') ||
       'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
@@ -119,6 +126,9 @@ export class DockerPullComponent implements OnInit {
       })
       .then((r) => {
         this.messageService.publish('镜像推送成功!', true);
+
+        // 重启服务
+        this.dockerService.rollout(this.ns, this.deployment);
       })
       .catch((error) => {
         // 捕获任何一个任务失败的情况

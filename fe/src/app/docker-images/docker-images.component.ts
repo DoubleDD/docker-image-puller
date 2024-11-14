@@ -14,13 +14,27 @@ import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 export interface NsImages {
   ns: string;
   color?: string;
-  images: Image[];
+  deployments: Deployment[];
+}
+export interface Deployment {
+  name: string;
+  image: Image;
 }
 export interface Image {
   name: string;
   tag?: string;
   description: string;
 }
+
+//type NamespaceImages struct {
+//	Namespace   string
+//	Deployments []Deployment
+//}
+//type Deployment struct {
+//	ImageName string
+//	Name      string
+//}
+
 @Component({
   selector: 'app-docker-images',
   standalone: true,
@@ -55,22 +69,41 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     {
       ns: 'default',
       color: this.getRandomColor(0),
-      images: [
-        { name: 'nginx', description: 'nginx' },
-        { name: 'ubuntu', description: 'ubuntu' },
-        { name: 'openjdk', description: 'java17' },
-        { name: 'golang', description: 'golang' },
+      deployments: [
+        {
+          name: 'nginx',
+          image: { name: 'nginx', description: 'nginx' },
+        },
+        {
+          name: 'ubuntu',
+          image: { name: 'ubuntu', description: 'ubuntu' },
+        },
+        {
+          name: 'java',
+          image: { name: 'openjdk', description: 'openjdk:17' },
+        },
+        {
+          name: 'golang',
+          image: { name: 'golang', description: 'golang:2.4', tag: '2.4' },
+        },
+        {
+          name: 'node',
+          image: { name: 'node', description: 'node:22.1', tag: '22.2' },
+        },
       ],
     },
     {
       ns: 'ylns',
       color: this.getRandomColor(1),
-      images: [
+      deployments: [
         {
           name: 'busybox',
-          tag: '1.19.2',
-          description:
-            '172.27.35.4:5000/yunli_mid_platform/busybox:latest-arm64',
+          image: {
+            name: 'busybox',
+            tag: '1.19.2',
+            description:
+              '172.27.35.4:5000/yunli_mid_platform/busybox:latest-arm64',
+          },
         },
       ],
     },
@@ -92,19 +125,23 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
         const json = await resp.json();
         const arr: NsImages[] = [];
         let i = 0;
-        for (const key in json) {
-          if (this.namespace != '' && this.namespace != key) {
-            continue;
-          }
+        for (const key of json) {
           arr.push({
-            ns: key,
+            ns: key.Namespace,
             color: this.getRandomColor(i++),
-            images: (json[key] as string[])
-              .map((imageUrl) => {
-                const item = parseDockerImage(imageUrl);
+            deployments: (key.Deployments as any[])
+              .map((deployment) => {
+                const item = parseDockerImage(deployment.ImageName);
                 const imageName = item.image;
                 const tag = item.tag || '';
-                return { name: imageName, description: imageUrl, tag: tag };
+                return {
+                  name: deployment.Name,
+                  image: {
+                    name: imageName,
+                    description: deployment.ImageName,
+                    tag: tag,
+                  },
+                };
               })
               .sort((a, b) => a.name.localeCompare(b.name)),
           });
@@ -141,20 +178,21 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   search() {
     const result: NsImages[] = [];
     this.data.forEach((v) => {
-      const images = v.images.filter(
-        (e) => e.description.indexOf(this.keyword) > -1,
+      const deployments = v.deployments.filter(
+        (e) => e.image.description.indexOf(this.keyword) > -1,
       );
-      if (images.length > 0) {
-        result.push({ ns: v.ns, color: v.color, images });
+      if (deployments.length > 0) {
+        result.push({ ns: v.ns, color: v.color, deployments });
       }
     });
 
     this.nsImages = result;
   }
 
-  goToDetail(imageName: string) {
+  goToDetail(deploymentName: string, imageName: string) {
     this.router.navigate(['/detail'], {
       queryParams: {
+        dp: deploymentName,
         repository: imageName.replace(
           '172.27.35.4:5000',
           'registry.cn-zhangjiakou.aliyuncs.com',
