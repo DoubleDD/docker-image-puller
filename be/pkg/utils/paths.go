@@ -12,8 +12,8 @@ func UserHomeDir() string {
 		fmt.Println("Error:", err)
 		return ""
 	}
+	fmt.Println("UserHomeDir", homeDir)
 	return homeDir
-
 }
 
 func UserHomeTmpDir() string {

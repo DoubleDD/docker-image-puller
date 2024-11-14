@@ -132,7 +132,7 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 	} else {
 		// 从网络下载
 		fmt.Println("从网络下载", digest)
-		err2 := downloadFromNetwork(repo, tag, digest, size, c, client)
+		err2 := downloadFromNetwork(repo, tag, digest, size, c, client, fileName)
 		if err2 != nil {
 			return err2
 		}
@@ -199,7 +199,7 @@ func downloadFromCache(fileName, digest string, size int64, c *gin.Context) erro
 	return nil
 }
 
-func downloadFromNetwork(repo string, tag string, digest string, size int64, c *gin.Context, client *DockerRegistryClient) error {
+func downloadFromNetwork(repo string, tag string, digest string, size int64, c *gin.Context, client *DockerRegistryClient, fileName string) error {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return err
@@ -229,6 +229,13 @@ func downloadFromNetwork(repo string, tag string, digest string, size int64, c *
 	// 使用缓冲读取并报告进度
 	buffer := make([]byte, maxBufferSize) // 1MB 缓冲区
 	var downloaded, chunkNumber, totalRead int64
+
+	// 本地文件
+	err = os.Remove(fileName)
+	if err != nil {
+		fmt.Println("删除文件失败，准备覆盖文件内容")
+		utils.CreateFileWithData(fileName, nil)
+	}
 
 	for {
 		n, err := resp.Body.Read(buffer[totalRead:])
@@ -260,6 +267,8 @@ func downloadFromNetwork(repo string, tag string, digest string, size int64, c *
 			c.Writer.Flush()
 			totalRead = 0 // 重置缓冲区
 			chunkNumber++
+			// 写数据到本地
+			utils.AppendDataToFile(buffer[:totalRead], fileName)
 		}
 
 		if err == io.EOF {

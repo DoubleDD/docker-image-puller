@@ -70,6 +70,19 @@ func MergeFiles(dirPath, outputFile string) {
 	}
 }
 
+func MkParentDir(filename string) error {
+	// 获取目标文件的父目录路径
+	dir := filepath.Dir(filename)
+
+	// 确保父目录存在，若不存在则递归创建
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		fmt.Println("Error creating directories:", err)
+		return err
+	}
+	return nil
+}
+
 func CreateFile(filename string) (*os.File, error) {
 	// 获取目标文件的父目录路径
 	dir := filepath.Dir(filename)
@@ -162,8 +175,27 @@ func DataHash(data []byte, hashFunc func() hash.Hash) (string, time.Duration) {
 }
 
 func CreateFileWithData(fileName string, data []byte) error {
-
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 写入数据
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AppendDataToFile(data []byte, fileName string) error {
+	err := MkParentDir(fileName)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
