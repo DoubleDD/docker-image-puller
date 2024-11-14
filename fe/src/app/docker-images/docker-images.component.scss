@@ -24,12 +24,14 @@
     rgba(11, 0, 137, 0.81)
   ); /* 标准语法 */
 
+  padding-bottom: 55px;
+
   button {
-    filter: drop-shadow(0px 0px 30px rgb(255, 255, 255));
+    filter: drop-shadow(0px 0px 9px rgb(255, 255, 255));
 
     i {
-      font-size: 25px; /* 设置图标大小 */
-      color: #fff; /* 设置图标颜色 */
+      font-size: 20px;
+      color: #fff;
     }
   }
 }
@@ -37,4 +39,3 @@ h2,
 h3 {
   text-shadow: 0 0 25px rgb(255, 255, 255); /* 添加发光效果 */
 }
-
