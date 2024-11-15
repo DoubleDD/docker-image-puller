@@ -195,9 +195,10 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     this.nsImages = result;
   }
 
-  goToDetail(deploymentName: string, imageName: string) {
+  goToDetail(ns: string, deploymentName: string, imageName: string) {
     this.router.navigate(['/detail'], {
       queryParams: {
+        ns: ns,
         dp: deploymentName,
         repository: imageName.replace(
           '172.27.35.4:5000',

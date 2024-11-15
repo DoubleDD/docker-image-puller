@@ -64,7 +64,7 @@
               @for (deployment of nsImage.deployments; track $index) {
                 <div
                   class="image-item border border-gray-800 transform hover:scale-105 hover:shadow-custom-light transition-all duration-300 bg-gray-400 rounded-xl p-4 relative cursor-pointer backdrop-filter backdrop-blur-lg bg-opacity-15 text-white"
-                  (click)="goToDetail(deployment.name,deployment.image.description)"
+                  (click)="goToDetail(nsImage.ns,deployment.name,deployment.image.description)"
                 >
                   <div class="flex items-center gap-3">
                     <i class="fab fa-docker text-3xl text-blue-500"></i>

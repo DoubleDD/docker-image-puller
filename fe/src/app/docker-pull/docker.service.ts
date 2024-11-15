@@ -358,6 +358,6 @@ export class DockerService {
     return this.http.post('/dip/api/docker/merge', { image, manifest });
   }
   rollout(ns: string, deployment: string): Observable<any> {
-    return this.http.get(`/dip/api/dp/rollout?ns=${ns}&dp=${deployment}`);
+    return this.http.get(`/dip/api/dp/rollout?ns=${ns}&name=${deployment}`);
   }
 }

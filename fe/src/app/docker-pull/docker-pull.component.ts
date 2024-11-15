@@ -128,7 +128,9 @@ export class DockerPullComponent implements OnInit {
         this.messageService.publish('镜像推送成功!', true);
 
         // 重启服务
-        this.dockerService.rollout(this.ns, this.deployment);
+        return firstValueFrom(
+          this.dockerService.rollout(this.ns, this.deployment),
+        );
       })
       .catch((error) => {
         // 捕获任何一个任务失败的情况
