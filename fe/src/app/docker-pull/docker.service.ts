@@ -27,7 +27,7 @@ const proxy_server = 'http://localhost:7152';
 })
 export class DockerService {
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
-  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30分钟的缓存时间（毫秒）
+  private readonly CACHE_DURATION = 3 * 60 * 1000; // 3分钟的缓存时间（毫秒）
 
   constructor(private http: HttpClient) {}
 

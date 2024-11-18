@@ -26,15 +26,6 @@ export interface Image {
   description: string;
 }
 
-//type NamespaceImages struct {
-//	Namespace   string
-//	Deployments []Deployment
-//}
-//type Deployment struct {
-//	ImageName string
-//	Name      string
-//}
-
 @Component({
   selector: 'app-docker-images',
   standalone: true,
@@ -110,11 +101,15 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   ];
   registry = 'registry.cn-zhangjiakou.aliyuncs.com';
   namespace = '';
+  d = '';
+
   constructor(private router: Router) {}
+
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
     this.namespace = urlParams.get('namespace') || '';
-    const debug = urlParams.get('d') || '';
+    this.d = urlParams.get('d') || '';
+    const debug = urlParams.get('debug') || '';
     if (debug) {
       this.nsImages = [...this.data];
       return;
@@ -198,6 +193,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   goToDetail(ns: string, deploymentName: string, imageName: string) {
     this.router.navigate(['/detail'], {
       queryParams: {
+        d: this.d,
         ns: ns,
         dp: deploymentName,
         repository: imageName.replace(
