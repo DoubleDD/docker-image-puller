@@ -1,0 +1,7 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 h-screen">
+@for (pod of pods; track pod) {
+  <div class="container rounded-lg overflow-y-auto" style="height: 60vh;">
+    <app-k8s-logs [ns]="ns" [podName]="pod"></app-k8s-logs>
+  </div>
+}
+</div>

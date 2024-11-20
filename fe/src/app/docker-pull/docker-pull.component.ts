@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { DockerService } from './docker.service';
+import { DockerService, Manifest } from '../services/docker.service';
+import { MessageService } from '../services/message.service';
 import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 import { MathFloorPipe } from '../shared/pipes/math-floor.pipe';
-import { MessageService } from '../message.service';
 
 export interface Layer {
   digest: string;
@@ -16,24 +17,16 @@ export interface Layer {
   status: 'pending' | 'downloading' | 'uploading' | 'completed' | 'error';
 }
 
-export interface Manifest {
-  schemaVersion: number;
-  mediaType: string;
-  config: {
-    digest: string;
-    size: number;
-  };
-  layers: {
-    mediaType: string;
-    size: number;
-    digest: string;
-  }[];
-}
-
 @Component({
   selector: 'app-docker-pull',
   standalone: true,
-  imports: [CommonModule, FormsModule, FileSizePipe, MathFloorPipe],
+  imports: [
+    RouterModule,
+    CommonModule,
+    FormsModule,
+    FileSizePipe,
+    MathFloorPipe,
+  ],
   templateUrl: './docker-pull.component.html',
   styleUrl: './docker-pull.component.css',
 })
@@ -47,6 +40,7 @@ export class DockerPullComponent implements OnInit {
   isProcessing = false;
   error = '';
   configContent: any = null;
+  d = '';
   constructor(
     private dockerService: DockerService,
     private messageService: MessageService,
@@ -54,11 +48,9 @@ export class DockerPullComponent implements OnInit {
 
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
-    const d = urlParams.get('d') || '0';
-    if (d === '1') {
-      this.ns = urlParams.get('ns') || '';
-      this.deployment = urlParams.get('dp') || '';
-    }
+    this.d = urlParams.get('d') || '0';
+    this.ns = urlParams.get('ns') || '';
+    this.deployment = urlParams.get('dp') || '';
     this.imageUrl =
       urlParams.get('repository') ||
       'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
@@ -77,6 +69,9 @@ export class DockerPullComponent implements OnInit {
         this.dockerService.getManifest(this.imageUrl),
       );
 
+      if (!this.manifest) {
+        return;
+      }
       // 解析层内容
       this.layers = this.manifest.layers.map((layer) => ({
         ...layer,
@@ -127,10 +122,14 @@ export class DockerPullComponent implements OnInit {
       .then((r) => {
         this.messageService.publish('镜像推送成功!', true);
 
-        // 重启服务
-        return firstValueFrom(
-          this.dockerService.rollout(this.ns, this.deployment),
-        );
+        if (this.d === '1') {
+          // 重启服务
+          return firstValueFrom(
+            this.dockerService.rollout(this.ns, this.deployment),
+          );
+        } else {
+          return new Promise(() => {});
+        }
       })
       .catch((error) => {
         // 捕获任何一个任务失败的情况

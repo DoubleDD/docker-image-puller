@@ -1,16 +1,15 @@
 import {
   AfterViewInit,
   Component,
-  numberAttribute,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { NotificationComponent } from './notification/notification.component';
 import { NotificationService } from './notification/notification.service';
-import { MessageService } from './message.service';
-import { Subscription } from 'rxjs';
+import { MessageService } from './services/message.service';
 
 @Component({
   selector: 'app-root',

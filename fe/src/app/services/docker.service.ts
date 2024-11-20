@@ -6,9 +6,21 @@ import {
 import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable, of, tap, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
-import { Manifest } from './docker-pull.component';
 
-interface CachedManifest {
+export interface Manifest {
+  schemaVersion: number;
+  mediaType: string;
+  config: {
+    digest: string;
+    size: number;
+  };
+  layers: {
+    mediaType: string;
+    size: number;
+    digest: string;
+  }[];
+}
+export interface CachedManifest {
   manifest: Manifest;
   timestamp: number;
 }

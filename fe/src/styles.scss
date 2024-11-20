@@ -2,3 +2,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* 自定义滚动条样式 */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #2d3748; /* 滚动条轨道颜色 */
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #4a5568; /* 滚动条滑块颜色 */
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #718096; /* 滚动条滑块悬停颜色 */
+}
