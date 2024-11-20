@@ -59,11 +59,8 @@ func ImageLayerBlobDownload(c *gin.Context) {
 	// 创建下载任务
 	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
 
-	// 设置SSE响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
+	// 转成 SSE 协议
+	utils.HttpToSse(c)
 
 	// 发送任务ID
 	c.SSEvent("taskId", taskID)

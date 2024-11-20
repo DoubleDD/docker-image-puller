@@ -17,6 +17,8 @@ func SetupRouter() *gin.Engine {
 	// API路由组
 	dip := r.Group("dip")
 	{
+		dip.GET("/api/dp/logs", handlers.Logs)
+		dip.GET("/api/dp/pods", handlers.Pods)
 		dip.GET("/api/dp/rollout", handlers.Rollout)
 		dip.GET("/api/docker/images", handlers.GetDockerImages)
 		dip.GET("/api/docker/blob/chunk/pre", handlers.UploadBlobChunkInitiate)
