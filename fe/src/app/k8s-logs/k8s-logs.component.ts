@@ -13,11 +13,10 @@ import { Subscription } from 'rxjs';
 import { K8sService } from '../services/k8s.service';
 
 @Component({
-  selector: 'app-k8s-logs',
-  standalone: true,
-  imports: [FormsModule, CommonModule],
-  templateUrl: './k8s-logs.component.html',
-  styleUrl: './k8s-logs.component.scss',
+    selector: 'app-k8s-logs',
+    imports: [FormsModule, CommonModule],
+    templateUrl: './k8s-logs.component.html',
+    styleUrl: './k8s-logs.component.scss'
 })
 export class K8sLogsComponent implements OnInit, OnDestroy {
   @ViewChild('logBody', { static: false }) logBody!: ElementRef;

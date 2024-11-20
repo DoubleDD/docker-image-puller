@@ -27,16 +27,15 @@ export interface Image {
 }
 
 @Component({
-  selector: 'app-docker-images',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    stringLengthPipe,
-    DownloadProgressModalComponent,
-  ],
-  templateUrl: './docker-images.component.html',
-  styleUrl: './docker-images.component.scss',
+    selector: 'app-docker-images',
+    imports: [
+        CommonModule,
+        FormsModule,
+        stringLengthPipe,
+        DownloadProgressModalComponent,
+    ],
+    templateUrl: './docker-images.component.html',
+    styleUrl: './docker-images.component.scss'
 })
 export class DockerImagesComponent implements OnInit, AfterViewInit {
   @ViewChild(DownloadProgressModalComponent)

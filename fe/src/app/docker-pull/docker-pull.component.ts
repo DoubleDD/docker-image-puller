@@ -18,17 +18,16 @@ export interface Layer {
 }
 
 @Component({
-  selector: 'app-docker-pull',
-  standalone: true,
-  imports: [
-    RouterModule,
-    CommonModule,
-    FormsModule,
-    FileSizePipe,
-    MathFloorPipe,
-  ],
-  templateUrl: './docker-pull.component.html',
-  styleUrl: './docker-pull.component.css',
+    selector: 'app-docker-pull',
+    imports: [
+        RouterModule,
+        CommonModule,
+        FormsModule,
+        FileSizePipe,
+        MathFloorPipe,
+    ],
+    templateUrl: './docker-pull.component.html',
+    styleUrl: './docker-pull.component.css'
 })
 export class DockerPullComponent implements OnInit {
   imageUrl = '';

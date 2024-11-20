@@ -3,11 +3,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  selector: 'app-download-progress-modal',
-  templateUrl: './download-progress-modal.component.html',
-  styleUrls: ['./download-progress-modal.component.scss'],
+    imports: [CommonModule, FormsModule],
+    selector: 'app-download-progress-modal',
+    templateUrl: './download-progress-modal.component.html',
+    styleUrls: ['./download-progress-modal.component.scss']
 })
 export class DownloadProgressModalComponent implements OnInit {
   @Input() layers: any[] = [];

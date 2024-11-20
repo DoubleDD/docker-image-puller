@@ -6,11 +6,10 @@ import { K8sLogsComponent } from '../k8s-logs/k8s-logs.component';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-k8s-pods',
-  standalone: true,
-  imports: [CommonModule, RouterModule, K8sLogsComponent],
-  templateUrl: './k8s-pods.component.html',
-  styleUrl: './k8s-pods.component.scss',
+    selector: 'app-k8s-pods',
+    imports: [CommonModule, RouterModule, K8sLogsComponent],
+    templateUrl: './k8s-pods.component.html',
+    styleUrl: './k8s-pods.component.scss'
 })
 export class K8sPodsComponent implements OnInit, OnDestroy {
   pods: string[] = [];

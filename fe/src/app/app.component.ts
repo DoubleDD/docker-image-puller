@@ -12,11 +12,10 @@ import { NotificationService } from './notification/notification.service';
 import { MessageService } from './services/message.service';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [RouterLink, RouterOutlet, NotificationComponent],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
+    selector: 'app-root',
+    imports: [RouterLink, RouterOutlet, NotificationComponent],
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.scss'
 })
 export class AppComponent implements AfterViewInit, OnInit, OnDestroy {
   title = 'docker-image-puller';
