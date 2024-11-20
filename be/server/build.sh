@@ -2,8 +2,9 @@
 
 # 定义目标平台
 platforms=(
-	 "linux/amd64"
+	# "linux/amd64"
 	"linux/arm64"
+	"darwin/arm64"
 )
 
 # 定义输出目录
@@ -20,7 +21,6 @@ for platform in "${platforms[@]}"; do
 	GOOS=${platform_split[0]}
 	GOARCH=${platform_split[1]}
 	output_name='server-docker-tools-'$GOOS'-'$GOARCH
-
 
 	# 输出文件路径
 	output_path="$output_dir/$output_name"

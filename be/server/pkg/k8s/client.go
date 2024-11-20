@@ -57,7 +57,7 @@ func GetLogs(ns, podName, containerName string, msgConsumer func(string)) error 
 		return err
 	}
 
-	req := clientset.CoreV1().Pods("default").GetLogs(podName, &v1.PodLogOptions{
+	req := clientset.CoreV1().Pods(ns).GetLogs(podName, &v1.PodLogOptions{
 		TailLines: func() *int64 { t := int64(100); return &t }(),
 		Container: containerName,
 		Follow:    true,
