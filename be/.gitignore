@@ -5,7 +5,7 @@
 __debug*
 /tmp
 /build
-/vendor
+*/vendor
 
 # IDEs and editors
 .idea/
