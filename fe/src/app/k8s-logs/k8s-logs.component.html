@@ -45,12 +45,10 @@
   </div>
 
   <!-- Body -->
-  <div class="flex-1 p-4 bg-gray-900 text-white overflow-y-auto" #logBody>
+  <div class="flex-1 bg-gray-900 text-white">
     <!-- 日志内容 -->
-    <div class="space-y-2">
-      @for (log of logs; track $index) {
-        <pre class="hover:bg-gray-700"> {{ log }} </pre>
-      }
-    </div>
+    <cdk-virtual-scroll-viewport itemSize="25" class="space-y-2 h-full overflow-auto w-full">
+      <pre *cdkVirtualFor="let item of logs; trackBy: trackByFn" class="hover:bg-gray-700">{{item}}</pre>
+    </cdk-virtual-scroll-viewport>
   </div>
 </div>

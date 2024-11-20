@@ -1,7 +1,14 @@
+import {
+  CdkVirtualScrollViewport,
+  FixedSizeVirtualScrollStrategy,
+  ScrollingModule,
+  VIRTUAL_SCROLL_STRATEGY,
+} from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
-  ElementRef,
   Input,
   OnDestroy,
   OnInit,
@@ -12,14 +19,27 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { K8sService } from '../services/k8s.service';
 
+/**
+ * 自定义策略
+ */
+export class CustomVirtualScrollStrategy extends FixedSizeVirtualScrollStrategy {
+  constructor() {
+    super(50, 250, 500);
+  }
+}
+
 @Component({
-    selector: 'app-k8s-logs',
-    imports: [FormsModule, CommonModule],
-    templateUrl: './k8s-logs.component.html',
-    styleUrl: './k8s-logs.component.scss'
+  selector: 'app-k8s-logs',
+  imports: [FormsModule, CommonModule, ScrollingModule],
+  templateUrl: './k8s-logs.component.html',
+  styleUrl: './k8s-logs.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    { provide: VIRTUAL_SCROLL_STRATEGY, useClass: CustomVirtualScrollStrategy },
+  ],
 })
 export class K8sLogsComponent implements OnInit, OnDestroy {
-  @ViewChild('logBody', { static: false }) logBody!: ElementRef;
+  @ViewChild(CdkVirtualScrollViewport) viewport!: CdkVirtualScrollViewport;
   logs: string[] = [];
   startTime: string = '';
   endTime: string = '';
@@ -33,6 +53,7 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
   constructor(
     private logsService: K8sService,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -59,22 +80,16 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
   }
 
   scrollToBottom() {
-    console.log('滚动');
-
     if (this.autoScroll) {
-      const logBodyElement = this.logBody.nativeElement;
-      console.log(logBodyElement);
-      console.log('scrollHeight:', logBodyElement.scrollHeight);
-      console.log('scrollTop:', logBodyElement.scrollTop);
-      setTimeout(() => {
-        this.logBody.nativeElement.scrollTop =
-          this.logBody.nativeElement.scrollHeight + 60;
-      }, 0);
+      // 平滑滚动到底部
+      const ele = this.viewport.getElementRef().nativeElement;
+      ele.scrollTo({ top: ele.scrollHeight, behavior: 'smooth' });
     }
   }
 
   refreshLog() {
     this.logs = [];
+    this.cdr.detectChanges(); // 手动设置监测更新
   }
 
   openBlank() {
@@ -97,20 +112,20 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
       .getLogs(this.ns, this.podName, '')
       .subscribe((log) => {
         if (log.trim() != '') {
-          const arr: string[] = [...this.logs];
+          const arr: string[] = [];
           log
             .trimEnd()
             .split('\n')
             .forEach((l) => arr.push(l));
-
-          if (arr.length >= 500) {
-            this.logs = arr.slice(-500);
-          } else {
-            this.logs = [...arr];
-          }
-          console.log(this.logs.length);
+          this.logs = [...this.logs, ...arr];
+          this.cdr.detectChanges(); // 手动设置监测更新
+          this.viewport.checkViewportSize();
           this.scrollToBottom();
         }
       });
+  }
+
+  trackByFn(index: number, item: string): number {
+    return index; // 返回列表项的索引
   }
 }

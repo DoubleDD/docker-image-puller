@@ -5,17 +5,17 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { NotificationComponent } from './notification/notification.component';
 import { NotificationService } from './notification/notification.service';
 import { MessageService } from './services/message.service';
 
 @Component({
-    selector: 'app-root',
-    imports: [RouterLink, RouterOutlet, NotificationComponent],
-    templateUrl: './app.component.html',
-    styleUrl: './app.component.scss'
+  selector: 'app-root',
+  imports: [RouterOutlet, NotificationComponent],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss',
 })
 export class AppComponent implements AfterViewInit, OnInit, OnDestroy {
   title = 'docker-image-puller';

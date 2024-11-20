@@ -6,9 +6,20 @@
 pre {
   word-wrap: break-word;
   white-space: break-spaces;
+  // height: 25px;
 }
 
 h2,
 h3 {
   text-shadow: 0 0 15px rgba(255, 255, 255,0.5); /* 添加发光效果 */
+}
+
+.example-viewport {
+  height: 200px;
+  width: 200px;
+  border: 1px solid white;
+}
+
+.example-item {
+  height: 50px;
 }
