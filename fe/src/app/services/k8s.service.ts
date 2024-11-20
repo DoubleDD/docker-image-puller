@@ -33,6 +33,7 @@ export class K8sService {
       };
 
       return () => {
+        // unsubscribed 时被调用
         this.eventSource.close();
       };
     });

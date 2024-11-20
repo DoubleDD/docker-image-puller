@@ -1,7 +1,21 @@
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 h-screen">
-@for (pod of pods; track pod) {
-  <div class="container rounded-lg overflow-y-auto" style="height: 60vh;">
-    <app-k8s-logs [ns]="ns" [podName]="pod"></app-k8s-logs>
-  </div>
-}
+<div
+  class="gap-4 overflow-y-auto h-full"
+  [ngClass]="{
+    'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2': pods.length > 1,
+  }"
+>
+  @for (pod of pods; track pod) {
+    <div
+      class="overflow-y-auto"
+      [ngClass]="{
+        'h-full': pods.length < 3,
+      }"
+    >
+      <app-k8s-logs
+        [ns]="ns"
+        [podName]="pod"
+        [autoScroll]="true"
+      ></app-k8s-logs>
+    </div>
+  }
 </div>

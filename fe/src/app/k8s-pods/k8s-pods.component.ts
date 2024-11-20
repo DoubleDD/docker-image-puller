@@ -3,11 +3,12 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { K8sService } from '../services/k8s.service';
 import { Subscription } from 'rxjs';
 import { K8sLogsComponent } from '../k8s-logs/k8s-logs.component';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-k8s-pods',
   standalone: true,
-  imports: [RouterModule, K8sLogsComponent],
+  imports: [CommonModule, RouterModule, K8sLogsComponent],
   templateUrl: './k8s-pods.component.html',
   styleUrl: './k8s-pods.component.scss',
 })
