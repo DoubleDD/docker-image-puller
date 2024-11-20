@@ -32,7 +32,7 @@ export enum UploadStrategy {
   COMPLETE = 'complete', // 在complete事件中一次性上传
 }
 
-const proxy_server = 'http://localhost:7152';
+const proxy_server = 'http://localhost:7151';
 
 @Injectable({
   providedIn: 'root',
