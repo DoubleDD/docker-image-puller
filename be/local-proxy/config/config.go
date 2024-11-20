@@ -10,7 +10,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Port:                "7152",
+		Port:                "7151",
 		DefaultUsername:     "kedong@yunlizhihui",
 		DefaultPassword:     "kedong@123",
 		DefaultPushRegistry: "172.27.35.4:5000",

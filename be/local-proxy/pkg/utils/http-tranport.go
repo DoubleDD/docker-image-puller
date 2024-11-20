@@ -9,12 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 自定义的 RoundTripper，用于拦截请求和响应
+// LoggingRoundTripper 自定义的 RoundTripper，用于拦截请求和响应
 type LoggingRoundTripper struct {
 	Transport http.RoundTripper
 }
 
-// 实现 RoundTripper 接口的 RoundTrip 方法
+// RoundTrip 实现 RoundTripper 接口的 RoundTrip 方法
 func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	start := time.Now()
 

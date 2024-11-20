@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// 新增：生成 curl 命令的辅助函数
+// GenerateCurlCommand 新增：生成 curl 命令的辅助函数
 func GenerateCurlCommand(req *http.Request) string {
 	// 基础命令
 	cmd := fmt.Sprintf("curl -X %s", req.Method)

@@ -2,8 +2,6 @@
 
 # 定义目标平台
 platforms=(
-	# "linux/amd64"
-	"linux/arm64"
 	"windows/amd64"
 	# "darwin/amd64"
 	"darwin/arm64"
@@ -22,7 +20,7 @@ for platform in "${platforms[@]}"; do
 	platform_split=(${platform//\// })
 	GOOS=${platform_split[0]}
 	GOARCH=${platform_split[1]}
-	output_name='docker-tools-'$GOOS'-'$GOARCH
+	output_name='proxy-docker-tools-'$GOOS'-'$GOARCH
 
 	# Windows 平台需要添加 .exe 后缀
 	if [ $GOOS = "windows" ]; then
@@ -46,5 +44,4 @@ done
 
 echo ""
 ls -hl build
-rm -rf /Users/kedong/Downloads/docker/build/
 cp -r build /Users/kedong/Downloads/docker/

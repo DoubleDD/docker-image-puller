@@ -24,7 +24,7 @@ type jwtPayload struct {
 	Exp int64 `json:"exp"`
 }
 
-// 新增：获取registry认证token的响应结构
+// TokenResponse 新增：获取registry认证token的响应结构
 type TokenResponse struct {
 	Token string `json:"token"`
 }

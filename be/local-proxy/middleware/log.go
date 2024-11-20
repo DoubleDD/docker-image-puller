@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 自定义日志中间件
+// CustomLogger 自定义日志中间件
 func CustomLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 记录请求开始时间

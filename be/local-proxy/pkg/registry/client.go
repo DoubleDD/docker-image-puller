@@ -33,7 +33,7 @@ func (c *httpClient) newRequest(method, path string, body io.Reader) (*http.Requ
 	return req, nil
 }
 
-// 新增：创建带有认证的请求
+// Do 新增：创建带有认证的请求
 func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -75,7 +75,7 @@ func NewDockerRegistryClient(registry string, opts ...func(*DockerRegistryClient
 	return client
 }
 
-// 提供设置认证信息的选项函数
+// WithAuth 提供设置认证信息的选项函数
 func WithAuth(username, password string) func(*DockerRegistryClient) {
 	if username == "" || password == "" {
 		return DefaultAuth()
@@ -418,7 +418,7 @@ func (client *DockerRegistryClient) fetchManifest(repo, tag string) (map[string]
 	return manifest, nil
 }
 
-// ListImagesInDirectory queries all images under a specified directory in a repository.
+// ListImages ListImagesInDirectory queries all images under a specified directory in a repository.
 // It returns the list of image names in the given directory.
 func (client *DockerRegistryClient) ListImages(registry, namespace string) ([]string, error) {
 
