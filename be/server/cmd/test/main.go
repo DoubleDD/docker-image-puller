@@ -14,9 +14,12 @@ func main() {
 }
 
 func getLogs() {
-	k8s.GetLogs("default", "chat2db-c49957b9-jwt9p", "", func(msg string) {
+	err := k8s.GetLogs("default", "chat2db-c49957b9-jwt9p", "", func(msg string) {
 		fmt.Println(msg)
 	})
+	if err != nil {
+		return
+	}
 }
 
 func getImages() {

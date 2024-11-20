@@ -19,7 +19,7 @@ for platform in "${platforms[@]}"; do
 	platform_split=(${platform//\// })
 	GOOS=${platform_split[0]}
 	GOARCH=${platform_split[1]}
-	output_name='docker-tools-'$GOOS'-'$GOARCH
+	output_name='server-docker-tools-'$GOOS'-'$GOARCH
 
 
 	# 输出文件路径
@@ -39,5 +39,3 @@ done
 
 echo ""
 ls -hl build
-rm -rf /Users/kedong/Downloads/docker/build/
-cp -r build /Users/kedong/Downloads/docker/

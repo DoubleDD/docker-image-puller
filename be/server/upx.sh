@@ -25,5 +25,4 @@ done
 
 echo ""
 ls -hl $output_dir
-rm -rf /Users/kedong/Downloads/docker/build/
 cp -r $output_dir /Users/kedong/Downloads/docker/
