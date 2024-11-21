@@ -71,7 +71,7 @@
                       {{ deployment.name | stringLength }}
                     </h3>
                   </div>
-                  <p class="text-sm text-gray-400 mt-2">
+                  <p class="text-sm text-gray-400 mt-2 break-words">
                     {{ deployment.image.description }}
                   </p>
                   <div class="mt-4 absolute bottom-4 left-4">
@@ -84,7 +84,7 @@
                   </div>
                   <!-- 拉镜像 -->
                   <div
-                    class="absolute bottom-4 right-12 cursor-pointer"
+                    class="absolute bottom-4 right-4 cursor-pointer"
                     (click)="
                       goToDetail(
                         nsImage.ns,
@@ -99,7 +99,7 @@
                   </div>
                   <!--日志 -->
                   <div
-                    class="absolute bottom-4 right-4 cursor-pointer"
+                    class="absolute top-4 right-4 cursor-pointer"
                     (click)="goToLog(nsImage.ns, deployment.name)"
                   >
                     <button class="text-blue-500 hover:text-blue-700">
