@@ -125,7 +125,7 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
       });
   }
 
-  trackByFn(index: number, item: string): number {
+  trackByFn(index: number, _: string): number {
     return index; // 返回列表项的索引
   }
 }

@@ -1,14 +1,7 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  Component,
-  HostListener,
-  OnInit,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink, RouterModule } from '@angular/router';
-import { DownloadProgressModalComponent } from '../download-progress-modal/download-progress-modal.component';
+import { Router, RouterModule } from '@angular/router';
 import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 
 export interface NsImages {
@@ -28,19 +21,13 @@ export interface Image {
 
 @Component({
   selector: 'app-docker-images',
-  imports: [
-    RouterModule,
-    CommonModule,
-    FormsModule,
-    stringLengthPipe,
-    DownloadProgressModalComponent,
-  ],
+  imports: [RouterModule, CommonModule, FormsModule, stringLengthPipe],
   templateUrl: './docker-images.component.html',
   styleUrl: './docker-images.component.scss',
 })
 export class DockerImagesComponent implements OnInit, AfterViewInit {
-  @ViewChild(DownloadProgressModalComponent)
-  downloadProgressModal!: DownloadProgressModalComponent;
+  //@ViewChild(DownloadProgressModalComponent)
+  //downloadProgressModal!: DownloadProgressModalComponent;
 
   // 定义 Tailwind CSS 的暗色背景颜色类数组
   private colors = [
@@ -207,48 +194,48 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     window.open(`./pods?ns=${ns}&dp=${deploymentName}`, '_blank');
   }
 
-  pull(event: Event, imageName: string) {
-    event.stopPropagation();
-
-    // 模拟镜像分层数据
-    const layers = [
-      { size: 100, progress: 0, uProgress: 0 },
-      { size: 200, progress: 0, uProgress: 0 },
-      { size: 300, progress: 0, uProgress: 0 },
-      { size: 400, progress: 0, uProgress: 0 },
-      { size: 500, progress: 0, uProgress: 0 },
-      { size: 600, progress: 0, uProgress: 0 },
-    ];
-
-    const totalSize = layers.reduce((sum, layer) => sum + layer.size, 0);
-
-    // 显示弹窗
-    this.downloadProgressModal.layers = layers;
-    this.downloadProgressModal.totalSize = totalSize;
-    this.downloadProgressModal.imageName = imageName;
-    this.downloadProgressModal.show();
-
-    // 模拟下载进度更新
-    layers.forEach((layer, index) => {
-      const interval = setInterval(() => {
-        if (layer.progress < 100) {
-          layer.progress += 20;
-          this.downloadProgressModal.updateLayerProgress(index, layer.progress);
-        }
-        if (layer.uProgress < 100) {
-          layer.uProgress += 10;
-          this.downloadProgressModal.updateLayerUploadProgress(
-            index,
-            layer.uProgress,
-          );
-        }
-
-        if (layer.uProgress >= 100 && layer.progress >= 100) {
-          clearInterval(interval);
-        }
-      }, 500);
-    });
-  }
+  //pull(event: Event, imageName: string) {
+  //  event.stopPropagation();
+  //
+  //  // 模拟镜像分层数据
+  //  const layers = [
+  //    { size: 100, progress: 0, uProgress: 0 },
+  //    { size: 200, progress: 0, uProgress: 0 },
+  //    { size: 300, progress: 0, uProgress: 0 },
+  //    { size: 400, progress: 0, uProgress: 0 },
+  //    { size: 500, progress: 0, uProgress: 0 },
+  //    { size: 600, progress: 0, uProgress: 0 },
+  //  ];
+  //
+  //  const totalSize = layers.reduce((sum, layer) => sum + layer.size, 0);
+  //
+  //  // 显示弹窗
+  //  this.downloadProgressModal.layers = layers;
+  //  this.downloadProgressModal.totalSize = totalSize;
+  //  this.downloadProgressModal.imageName = imageName;
+  //  this.downloadProgressModal.show();
+  //
+  //  // 模拟下载进度更新
+  //  layers.forEach((layer, index) => {
+  //    const interval = setInterval(() => {
+  //      if (layer.progress < 100) {
+  //        layer.progress += 20;
+  //        this.downloadProgressModal.updateLayerProgress(index, layer.progress);
+  //      }
+  //      if (layer.uProgress < 100) {
+  //        layer.uProgress += 10;
+  //        this.downloadProgressModal.updateLayerUploadProgress(
+  //          index,
+  //          layer.uProgress,
+  //        );
+  //      }
+  //
+  //      if (layer.uProgress >= 100 && layer.progress >= 100) {
+  //        clearInterval(interval);
+  //      }
+  //    }, 500);
+  //  });
+  //}
 }
 
 interface DockerImage {
