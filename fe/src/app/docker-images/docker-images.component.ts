@@ -7,7 +7,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink, RouterModule } from '@angular/router';
 import { DownloadProgressModalComponent } from '../download-progress-modal/download-progress-modal.component';
 import { stringLengthPipe } from '../shared/pipes/string-length.pipe';
 
@@ -27,15 +27,16 @@ export interface Image {
 }
 
 @Component({
-    selector: 'app-docker-images',
-    imports: [
-        CommonModule,
-        FormsModule,
-        stringLengthPipe,
-        DownloadProgressModalComponent,
-    ],
-    templateUrl: './docker-images.component.html',
-    styleUrl: './docker-images.component.scss'
+  selector: 'app-docker-images',
+  imports: [
+    RouterModule,
+    CommonModule,
+    FormsModule,
+    stringLengthPipe,
+    DownloadProgressModalComponent,
+  ],
+  templateUrl: './docker-images.component.html',
+  styleUrl: './docker-images.component.scss',
 })
 export class DockerImagesComponent implements OnInit, AfterViewInit {
   @ViewChild(DownloadProgressModalComponent)
@@ -201,6 +202,9 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
         ),
       },
     });
+  }
+  goToLog(ns: string, deploymentName: string) {
+    window.open(`./pods?ns=${ns}&dp=${deploymentName}`, '_blank');
   }
 
   pull(event: Event, imageName: string) {
