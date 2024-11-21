@@ -1,10 +1,13 @@
 package k8s
 
 import (
+	"bufio"
 	"context"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
@@ -61,6 +64,7 @@ func GetLogs(ns, podName, containerName string, msgConsumer func(string)) error 
 		TailLines: func() *int64 { t := int64(100); return &t }(),
 		Container: containerName,
 		Follow:    true,
+		// Timestamps: true,
 	})
 
 	stream, err := req.Stream(context.Background())
@@ -69,14 +73,54 @@ func GetLogs(ns, podName, containerName string, msgConsumer func(string)) error 
 	}
 	defer stream.Close()
 
-	buf := make([]byte, 2048)
+	// 4. 处理日志流
+	reader := bufio.NewReader(stream)
+
+	// 用于存储未完成的行
+	var incompleteLine string
+
 	for {
-		n, err := stream.Read(buf)
-		if err != nil {
+		// 读取日志
+		buf := make([]byte, 4096) // 缓冲区大小
+		n, err := reader.Read(buf)
+		if err != nil && err != io.EOF {
+			log.Fatalf("Error reading log stream: %v", err)
+		}
+		if n == 0 {
 			break
 		}
-		msgConsumer(string(buf[:n]))
+
+		// 合并未完成的行和新读取的日志
+		logChunk := incompleteLine + string(buf[:n])
+
+		// 分割日志行
+		lines := strings.Split(logChunk, "\n")
+
+		// 检查最后一行是否完整
+		if !strings.HasSuffix(logChunk, "\n") {
+			// 缓存最后一行
+			incompleteLine = lines[len(lines)-1]
+			lines = lines[:len(lines)-1] // 排除最后一行
+		} else {
+			// 如果最后一行是完整的，清空缓存
+			incompleteLine = ""
+		}
+		msgConsumer(strings.Join(lines, "\n"))
+
+		// 打印完整的日志行
+		// for _, line := range lines {
+		// 	fmt.Println(line)
+		// }
+
+		// 如果是 EOF 且有未处理的部分，打印缓存
+		// if err == io.EOF {
+		// 	if incompleteLine != "" {
+		// 		fmt.Println(incompleteLine)
+		// 	}
+		// 	break
+		// }
 	}
+
 	return nil
 }
 
