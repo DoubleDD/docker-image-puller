@@ -111,17 +111,15 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
     this.subscription = this.logsService
       .getLogs(this.ns, this.podName, '')
       .subscribe((log) => {
-        if (log.trim() != '') {
-          const arr: string[] = [];
-          log
-            .trimEnd()
-            .split('\n')
-            .forEach((l) => arr.push(l));
-          this.logs = [...this.logs, ...arr];
-          this.cdr.detectChanges(); // 手动设置监测更新
-          this.viewport.checkViewportSize();
-          this.scrollToBottom();
+        console.log(log);
+        if (log.endsWith('\n')) {
+          log = log.slice(0, -1);
         }
+
+        this.logs = [...this.logs, ...log.split('\n')];
+        this.cdr.detectChanges(); // 手动设置监测更新
+        this.viewport.checkViewportSize();
+        this.scrollToBottom();
       });
   }
 

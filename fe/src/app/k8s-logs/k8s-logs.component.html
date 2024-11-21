@@ -48,7 +48,7 @@
   <div class="flex-1 bg-gray-900 text-white">
     <!-- 日志内容 -->
     <cdk-virtual-scroll-viewport itemSize="25" class="space-y-2 h-full overflow-auto w-full">
-      <pre *cdkVirtualFor="let item of logs; trackBy: trackByFn" class="hover:bg-gray-700">{{item}}</pre>
+      <pre *cdkVirtualFor="let item of logs; trackBy: trackByFn" class="hover:bg-gray-700">{{item || " "}}</pre>
     </cdk-virtual-scroll-viewport>
   </div>
 </div>
