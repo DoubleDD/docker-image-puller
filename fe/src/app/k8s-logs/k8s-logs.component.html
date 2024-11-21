@@ -3,7 +3,7 @@
   <div
     class="sticky top-0 z-10 flex justify-between items-center p-2 bg-gray-800 text-white"
   >
-    <div class="text-lg font-bold">
+    <div class="flex text-lg font-bold">
       <div class="flex items-center gap-3">
         <i class="fas fa-cube text-3xl text-blue-500"></i>
         <h3
@@ -13,6 +13,14 @@
           {{ podName }}
         </h3>
       </div>
+      @if (containers.length > 1) {
+        <div class="flex items-center gap-3">
+          <app-dropdown-selector
+            [options]="containers"
+            (optionChange)="handleDropdownChange($event)"
+          ></app-dropdown-selector>
+        </div>
+      }
     </div>
     <div class="flex items-center space-x-4">
       <label class="flex items-center space-x-2 cursor-pointer">
@@ -47,8 +55,15 @@
   <!-- Body -->
   <div class="flex-1 bg-gray-900 text-white">
     <!-- 日志内容 -->
-    <cdk-virtual-scroll-viewport itemSize="25" class="space-y-2 h-full overflow-auto w-full">
-      <pre *cdkVirtualFor="let item of logs; trackBy: trackByFn" class="hover:bg-gray-700">{{item || " "}}</pre>
+    <cdk-virtual-scroll-viewport
+      itemSize="25"
+      class="space-y-2 h-full overflow-auto w-full"
+    >
+      <pre
+        *cdkVirtualFor="let item of logs; trackBy: trackByFn"
+        class="hover:bg-gray-700"
+        >{{ item || " " }}</pre
+      >
     </cdk-virtual-scroll-viewport>
   </div>
 </div>

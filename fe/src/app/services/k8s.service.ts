@@ -16,6 +16,12 @@ export class K8sService {
     );
   }
 
+  getContainers(ns: string, podName: string): Observable<string[]> {
+    return this.http.get<string[]>(
+      `/dip/api/dp/containers?ns=${ns}&p=${podName}`,
+    );
+  }
+
   getLogs(
     ns: string,
     podName: string,

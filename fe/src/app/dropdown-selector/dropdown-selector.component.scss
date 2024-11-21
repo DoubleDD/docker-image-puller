@@ -1,0 +1,14 @@
+/* 自定义 select 样式 */
+select {
+  @apply appearance-none;
+}
+
+/* 自定义 option 样式 */
+option {
+  @apply bg-gray-700 text-white;
+}
+
+/* 自定义 select 箭头 */
+.select-arrow {
+  @apply pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white;
+}

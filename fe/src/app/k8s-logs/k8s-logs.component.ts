@@ -6,6 +6,7 @@ import {
 } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -16,8 +17,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription, switchMap } from 'rxjs';
 import { K8sService } from '../services/k8s.service';
+import { DropdownSelectorComponent } from '../dropdown-selector/dropdown-selector.component';
 
 /**
  * 自定义策略
@@ -30,7 +32,12 @@ export class CustomVirtualScrollStrategy extends FixedSizeVirtualScrollStrategy 
 
 @Component({
   selector: 'app-k8s-logs',
-  imports: [FormsModule, CommonModule, ScrollingModule],
+  imports: [
+    FormsModule,
+    CommonModule,
+    ScrollingModule,
+    DropdownSelectorComponent,
+  ],
   templateUrl: './k8s-logs.component.html',
   styleUrl: './k8s-logs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,8 +45,12 @@ export class CustomVirtualScrollStrategy extends FixedSizeVirtualScrollStrategy 
     { provide: VIRTUAL_SCROLL_STRATEGY, useClass: CustomVirtualScrollStrategy },
   ],
 })
-export class K8sLogsComponent implements OnInit, OnDestroy {
+export class K8sLogsComponent implements AfterViewInit, OnInit, OnDestroy {
   @ViewChild(CdkVirtualScrollViewport) viewport!: CdkVirtualScrollViewport;
+
+  selectedContainer: string = '';
+  containers: string[] = ['a', 'b', 'c', 'd'];
+
   logs: string[] = [];
   startTime: string = '';
   endTime: string = '';
@@ -71,9 +82,21 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
         this.podName = 'chat2db-c49957b9-jwt9p';
       }
 
-      this.getLogs();
+      // 获取container
+      this.logsService
+        .getContainers(this.ns, this.podName)
+        .subscribe((resp: any) => {
+          this.containers = resp.list;
+          if (this.containers.length > 0) {
+            this.selectedContainer = this.containers[0];
+          }
+          this.cdr.detectChanges(); //触发一下页面渲染
+          this.getLogs();
+        });
     });
   }
+
+  ngAfterViewInit(): void {}
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
@@ -111,21 +134,31 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
 
   getLogs() {
     this.subscription = this.logsService
-      .getLogs(this.ns, this.podName, '')
-      .subscribe((log) => {
-        console.log(log);
-        if (log.endsWith('\n')) {
-          log = log.slice(0, -1);
-        }
+      .getLogs(this.ns, this.podName, this.selectedContainer)
+      .subscribe((log) => this.logHandler(log));
+  }
 
-        this.logs = [...this.logs, ...log.split('\n')];
-        this.cdr.detectChanges(); // 手动设置监测更新
-        this.viewport.checkViewportSize();
-        this.scrollToBottom();
-      });
+  private logHandler(log: string) {
+    if (log.endsWith('\n')) {
+      log = log.slice(0, -1);
+    }
+
+    this.logs = [...this.logs, ...log.split('\n')];
+    this.cdr.detectChanges(); // 手动设置监测更新
+    this.viewport.checkViewportSize();
+    this.scrollToBottom();
   }
 
   trackByFn(index: number, _: string): number {
     return index; // 返回列表项的索引
+  }
+
+  handleDropdownChange(option: string): void {
+    console.log('Selected option:', option);
+    // 在这里执行业务逻辑
+    alert();
+    this.selectedContainer = option;
+    this.cdr.detectChanges();
+    this.getLogs();
   }
 }
