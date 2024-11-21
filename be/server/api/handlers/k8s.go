@@ -49,3 +49,14 @@ func Pods(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"msg": "ok", "list": pods})
 }
+
+func Containers(c *gin.Context) {
+	podName := c.Query("p")
+	ns := c.Query("ns")
+	cs, err := k8s.GetContainersForPod(ns, podName)
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("获取container异常: %v", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "list": cs})
+}

@@ -18,6 +18,7 @@ func SetupRouter() *gin.Engine {
 	dip := r.Group("dip")
 	{
 		dip.GET("/api/dp/logs", handlers.Logs)
+		dip.GET("/api/dp/containers", handlers.Containers)
 		dip.GET("/api/dp/pods", handlers.Pods)
 		dip.GET("/api/dp/rollout", handlers.Rollout)
 		dip.GET("/api/docker/images", handlers.GetDockerImages)

@@ -160,3 +160,27 @@ func GetPodsForDeployment(namespace, deploymentName string) ([]string, error) {
 
 	return podNames, nil
 }
+
+func GetContainersForPod(namespace, podName string) ([]string, error) {
+	clientset, err := GetClientset()
+	if err != nil {
+		log.Fatalf("Error getting clientset: %v", err)
+		return nil, err
+	}
+	// 获取 Pod 对象
+	pod, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		log.Fatalf("Error getting pod: %s", err.Error())
+	}
+
+	// 获取 Pod 中的容器列表
+	containers := pod.Spec.Containers
+
+	// 创建一个字符串数组来存储容器名称
+	containerNames := make([]string, len(containers))
+	for i, container := range containers {
+		containerNames[i] = container.Name
+	}
+
+	return containerNames, nil
+}
