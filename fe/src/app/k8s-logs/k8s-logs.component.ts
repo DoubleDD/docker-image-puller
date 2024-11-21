@@ -82,8 +82,10 @@ export class K8sLogsComponent implements OnInit, OnDestroy {
   scrollToBottom() {
     if (this.autoScroll) {
       // 平滑滚动到底部
-      const ele = this.viewport.getElementRef().nativeElement;
-      ele.scrollTo({ top: ele.scrollHeight, behavior: 'smooth' });
+      requestAnimationFrame(() => {
+        const ele = this.viewport.getElementRef().nativeElement;
+        ele.scrollTo({ top: ele.scrollHeight, behavior: 'smooth' });
+      });
     }
   }
 
