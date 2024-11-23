@@ -17,6 +17,7 @@ func SetupRouter() *gin.Engine {
 	// API路由组
 	proxy := r.Group("proxy")
 	{
+		proxy.GET("/status", handlers.Status)
 		proxy.GET("/api/docker/manifest", handlers.GetManifest)
 		proxy.GET("/api/docker/blob/download", handlers.ImageLayerBlobDownload)
 	}
