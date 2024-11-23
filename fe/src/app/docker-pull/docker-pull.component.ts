@@ -5,8 +5,10 @@ import { RouterModule } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { DockerService, Manifest } from '../services/docker.service';
 import { MessageService } from '../services/message.service';
+import { PubSubService } from '../services/pubsub.service';
 import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 import { MathFloorPipe } from '../shared/pipes/math-floor.pipe';
+import { LocalProxyGuideComponent } from '../local-proxy-guide/local-proxy-guide.component';
 
 export interface Layer {
   digest: string;
@@ -18,16 +20,17 @@ export interface Layer {
 }
 
 @Component({
-    selector: 'app-docker-pull',
-    imports: [
-        RouterModule,
-        CommonModule,
-        FormsModule,
-        FileSizePipe,
-        MathFloorPipe,
-    ],
-    templateUrl: './docker-pull.component.html',
-    styleUrl: './docker-pull.component.css'
+  selector: 'app-docker-pull',
+  imports: [
+    RouterModule,
+    CommonModule,
+    FormsModule,
+    FileSizePipe,
+    MathFloorPipe,
+    LocalProxyGuideComponent,
+  ],
+  templateUrl: './docker-pull.component.html',
+  styleUrl: './docker-pull.component.css',
 })
 export class DockerPullComponent implements OnInit {
   imageUrl = '';
@@ -40,20 +43,30 @@ export class DockerPullComponent implements OnInit {
   error = '';
   configContent: any = null;
   d = '';
+  localProxy = false;
   constructor(
     private dockerService: DockerService,
     private messageService: MessageService,
+    private pubsubService: PubSubService,
   ) {}
 
   ngOnInit(): void {
-    const urlParams = new URLSearchParams(window.location.search);
-    this.d = urlParams.get('d') || '0';
-    this.ns = urlParams.get('ns') || '';
-    this.deployment = urlParams.get('dp') || '';
-    this.imageUrl =
-      urlParams.get('repository') ||
-      'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
-    this.fetchManifest();
+    // 本页面功能依赖本地代理服务，检测本地代理是否开启
+    this.dockerService.checkLocalProxy().then((resp) => {
+      if (!resp) {
+        // 本地代理没有开
+        this.localProxy = true;
+        return;
+      }
+      const urlParams = new URLSearchParams(window.location.search);
+      this.d = urlParams.get('d') || '0';
+      this.ns = urlParams.get('ns') || '';
+      this.deployment = urlParams.get('dp') || '';
+      this.imageUrl =
+        urlParams.get('repository') ||
+        'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
+      this.fetchManifest();
+    });
   }
 
   async fetchManifest() {
@@ -103,11 +116,15 @@ export class DockerPullComponent implements OnInit {
     this.error = '';
 
     Promise.all([
-      this.dockerService.uploadChunck(
-        this.manifest.config.digest,
-        0,
-        btoa(JSON.stringify(this.configContent)),
+      // 上传manifest
+      firstValueFrom(
+        this.dockerService.uploadChunck(
+          this.manifest.config.digest,
+          0,
+          btoa(JSON.stringify(this.configContent)),
+        ),
       ),
+      // 上传镜像层数据
       ...this.layers.map((layer) => this.processLayer(layer)),
     ])
       .then(() => {
@@ -118,7 +135,7 @@ export class DockerPullComponent implements OnInit {
           this.dockerService.mergeImage(this.imageUrl, this.manifest),
         );
       })
-      .then((r) => {
+      .then((_) => {
         this.messageService.publish('镜像推送成功!', true);
 
         if (this.d === '1') {
@@ -127,7 +144,7 @@ export class DockerPullComponent implements OnInit {
             this.dockerService.rollout(this.ns, this.deployment),
           );
         } else {
-          return new Promise(() => {});
+          return Promise.resolve();
         }
       })
       .catch((error) => {

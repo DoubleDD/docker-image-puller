@@ -6,6 +6,7 @@ import {
 import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable, of, tap, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
+import { HttpService } from './http.service';
 
 export interface Manifest {
   schemaVersion: number;
@@ -41,7 +42,10 @@ export class DockerService {
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3分钟的缓存时间（毫秒）
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private httpService: HttpService,
+  ) {}
 
   getManifest(imageUrl: string): Observable<Manifest> {
     // 尝试从缓存获取
@@ -152,15 +156,17 @@ export class DockerService {
             case UploadStrategy.NONE:
               break;
             case UploadStrategy.IMMEDIATE:
+              // 收到数据后立马上传
               // 在网络不好的时候，一个请求要等很久才能结束，这里需要记录开始和结束的请求，只有两个相等时，才表明所有的请求都结束了
               // 开始的请求计数
               startCount++;
-              const resp = await this.uploadChunck(
+              const resp = await this.uploadChunckWithPool(
                 digest,
                 chunk.no,
                 chunk.data,
                 chunk.md5,
               );
+              console.log('请求池返回：', resp);
 
               // 结束的请求计数
               endCount++;
@@ -195,19 +201,21 @@ export class DockerService {
             chunkBuffer.length > 0
           ) {
             // 完成后上传策略：一次性上传所有数据
-            this.uploadChunck(digest, 0, chunkBuffer.join(''))
-              .then(() => {
+            this.uploadChunck(digest, 0, chunkBuffer.join('')).subscribe({
+              next: (_) => {
                 observer.next({ p: 100, u: 100, d: result.size });
+              },
+              complete: () => {
                 observer.complete();
-              })
-              .catch((error) => {
-                console.error('Failed to upload chunks:', error);
+              },
+              error: (e) => {
+                console.error('Failed to upload chunks:', e);
                 observer.error('上传数据失败');
-              });
+              },
+            });
           } else {
             observer.next({ p: 100, u: 100, d: result.size });
             //console.log('startCount', startCount, 'endCount', endCount);
-
             if (startCount == endCount) {
               observer.complete();
             }
@@ -289,6 +297,17 @@ export class DockerService {
     });
   }
 
+  uploadChunckWithPool(
+    digest: string,
+    no: number,
+    chunks: string,
+    hash?: string,
+  ): Promise<any> {
+    return this.httpService.run<any>(() =>
+      firstValueFrom(this.uploadChunck(digest, no, chunks, hash)),
+    );
+  }
+
   /**
    * 上传文件分片
    * @param digest 摘要信息
@@ -300,33 +319,35 @@ export class DockerService {
     no: number,
     chunks: string,
     hash?: string,
-  ): Promise<any> {
+  ): Observable<any> {
     const index = no.toString().padStart(4, '0');
-    return firstValueFrom(
-      this.sendPreflightRequest(hash || '', index, digest).pipe(
-        switchMap((flag) => {
-          if (!flag) {
-            return of(null); // 返回一个空值或错误信息
-          }
+    return this.sendPreflightRequest(hash || '', index, digest).pipe(
+      switchMap((flag) => {
+        if (!flag) {
+          return of(null); // 返回一个空值或错误信息
+        }
 
-          const formData = new FormData();
-          formData.append('digest', digest);
-          formData.append('no', index);
-          formData.append('size', (chunks.length * 3) / 4 + '');
-          formData.append('md5', hash || '');
-          formData.append('chunk', chunks);
+        const formData = new FormData();
+        formData.append('digest', digest);
+        formData.append('no', index);
+        formData.append('size', (chunks.length * 3) / 4 + '');
+        formData.append('md5', hash || '');
+        formData.append('chunk', chunks);
 
-          return this.http.post('/dip/api/docker/blob/chunk', formData);
-        }),
-        catchError((error) => {
-          if (error.message) {
-            console.error('Error uploading chunk:', error);
-          }
-          return of(null); // 处理错误并返回一个空值或错误信息
-        }),
-      ),
+        return this.http.post(
+          '/dip/api/docker/blob/chunk?digest=' + digest,
+          formData,
+        );
+      }),
+      catchError((error) => {
+        if (error.message) {
+          console.error('Error uploading chunk:', error);
+        }
+        return of(null); // 处理错误并返回一个空值或错误信息
+      }),
     );
   }
+
   // 发送预检请求
   sendPreflightRequest(
     hash: string,
@@ -371,5 +392,16 @@ export class DockerService {
   }
   rollout(ns: string, deployment: string): Observable<any> {
     return this.http.get(`/dip/api/dp/rollout?ns=${ns}&name=${deployment}`);
+  }
+
+  checkLocalProxy(): Promise<any> {
+    return firstValueFrom(
+      this.http.get(proxy_server + '/proxy/status').pipe(
+        catchError((e) => {
+          console.log(e);
+          return of(null);
+        }),
+      ),
+    );
   }
 }
