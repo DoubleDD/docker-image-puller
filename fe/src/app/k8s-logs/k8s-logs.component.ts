@@ -156,7 +156,7 @@ export class K8sLogsComponent implements AfterViewInit, OnInit, OnDestroy {
   handleDropdownChange(option: string): void {
     console.log('Selected option:', option);
     // 在这里执行业务逻辑
-    alert();
+    this.logs = [];
     this.selectedContainer = option;
     this.cdr.detectChanges();
     this.getLogs();
