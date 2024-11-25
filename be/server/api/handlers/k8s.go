@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"docker-image-handler/pkg/k8s"
-	"docker-image-handler/pkg/utils"
+	"docker-image-handler/utils"
 	"fmt"
 	"net/http"
 
@@ -22,7 +22,7 @@ func Logs(c *gin.Context) {
 	containerName := c.Query("c")
 	ns := c.Query("ns")
 	if podName == "" || ns == "" {
-		c.String(http.StatusBadRequest, "ns, pod  parameters are required")
+		utils.Fail(c, "ns, pod parameters are required", http.StatusBadRequest)
 		return
 	}
 

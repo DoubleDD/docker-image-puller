@@ -113,12 +113,12 @@ func GetLogs(ns, podName, containerName string, msgConsumer func(string)) error 
 		// }
 
 		// 如果是 EOF 且有未处理的部分，打印缓存
-		// if err == io.EOF {
-		// 	if incompleteLine != "" {
-		// 		fmt.Println(incompleteLine)
-		// 	}
-		// 	break
-		// }
+		if err == io.EOF {
+			if incompleteLine != "" {
+				msgConsumer(strings.Join(lines, "\n"))
+			}
+			break
+		}
 	}
 
 	return nil

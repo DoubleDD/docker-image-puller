@@ -14,6 +14,9 @@ func SetupRouter() *gin.Engine {
 	// 使用中间件
 	r.Use(middleware.CORS())
 
+	// 全局异常处理
+	r.Use(middleware.RecoveryMiddleware())
+
 	// API路由组
 	dip := r.Group("dip")
 	{
