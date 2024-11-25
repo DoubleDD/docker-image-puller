@@ -20,6 +20,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable, Subscription, switchMap } from 'rxjs';
 import { K8sService } from '../services/k8s.service';
 import { DropdownSelectorComponent } from '../dropdown-selector/dropdown-selector.component';
+import { DownloadService } from '../services/download.service';
 
 /**
  * 自定义策略
@@ -65,6 +66,7 @@ export class K8sLogsComponent implements AfterViewInit, OnInit, OnDestroy {
     private logsService: K8sService,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private downloadService: DownloadService,
   ) {}
 
   ngOnInit(): void {
@@ -130,6 +132,17 @@ export class K8sLogsComponent implements AfterViewInit, OnInit, OnDestroy {
       this.getLogs();
     }
     this.playing = !this.playing;
+  }
+
+  /**
+   * 下载日志
+   */
+  download() {
+    const blob = new Blob(
+      this.logs.map((v) => v + '\n'),
+      { type: 'text/plain' },
+    );
+    this.downloadService.downloadFile(blob, this.podName + '.log');
   }
 
   getLogs() {
