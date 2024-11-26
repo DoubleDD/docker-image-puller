@@ -3,7 +3,7 @@ package main
 import (
 	"docker-image-handler/api"
 	"docker-image-handler/config"
-	"docker-image-handler/pkg/utils"
+	"docker-image-handler/utils"
 	"log"
 	"net/http"
 )

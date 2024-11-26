@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"docker-image-handler/pkg/utils"
+	"docker-image-handler/utils"
 	"encoding/base64"
 	"fmt"
 	"net/http"

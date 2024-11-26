@@ -22,7 +22,7 @@ func Logs(c *gin.Context) {
 	containerName := c.Query("c")
 	ns := c.Query("ns")
 	if podName == "" || ns == "" {
-		utils.Fail(c, "ns, pod parameters are required", http.StatusBadRequest)
+		utils.Fail(c, http.StatusBadRequest, "ns, pod parameters are required")
 		return
 	}
 

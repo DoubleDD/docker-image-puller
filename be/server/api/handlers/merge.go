@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"docker-image-handler/internal/models"
 	"docker-image-handler/pkg/docker"
-	"docker-image-handler/pkg/utils"
+	"docker-image-handler/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"

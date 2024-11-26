@@ -17,7 +17,7 @@ type Deployment struct {
 	Name      string
 }
 
-func GetImages(namespace string) ([]NamespaceImages, error) {
+func GetImagesBack(namespace string) ([]NamespaceImages, error) {
 	var result []NamespaceImages
 	var nsList []string
 	if namespace != "" {
@@ -86,7 +86,7 @@ func GetImages(namespace string) ([]NamespaceImages, error) {
 }
 
 // 滚动更新服务
-func RolloutDeployment(name string, namespace string) string {
+func RolloutDeploymentBackup(name string, namespace string) string {
 	if namespace == "" {
 		namespace = "default"
 	}

@@ -2,7 +2,7 @@ package docker
 
 import (
 	"docker-image-handler/config"
-	"docker-image-handler/pkg/utils"
+	"docker-image-handler/utils"
 	"fmt"
 	"os"
 	"os/exec"

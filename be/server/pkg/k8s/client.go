@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +52,95 @@ func GetClientset() (*kubernetes.Clientset, error) {
 	})
 
 	return instance, err
+}
+
+func GetImagesNew(namespace string) ([]NamespaceImages, error) {
+	var result []NamespaceImages
+	var nsList []string
+
+	clientset, err := GetClientset()
+	if err != nil {
+		return nil, err
+	}
+
+	if namespace != "" {
+		nsList = append(nsList, namespace)
+	} else {
+		// 获取所有命名空间
+		namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, ns := range namespaces.Items {
+			nsList = append(nsList, ns.Name)
+		}
+	}
+
+	for _, ns := range nsList {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+
+		// 获取命名空间下的所有 Deployment
+		deployments, err := clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		var deploymentList []Deployment
+		for _, deployment := range deployments.Items {
+			deploymentName := deployment.Name
+
+			// 获取 initContainers 的镜像
+			var imagesStr string
+			for _, container := range deployment.Spec.Template.Spec.InitContainers {
+				imagesStr += container.Image + "\n"
+			}
+
+			// 如果没有 initContainers，获取 containers 的镜像
+			if imagesStr == "" {
+				for _, container := range deployment.Spec.Template.Spec.Containers {
+					imagesStr += container.Image + "\n"
+				}
+			}
+
+			if imagesStr != "" {
+				deploymentList = append(deploymentList, Deployment{
+					Name:      deploymentName,
+					ImageName: strings.TrimSpace(imagesStr),
+				})
+			}
+		}
+
+		if len(deploymentList) > 0 {
+			result = append(result, NamespaceImages{
+				Namespace:   ns,
+				Deployments: deploymentList,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func RolloutDeployment(name string, namespace string) string {
+	if namespace == "" {
+		namespace = "default"
+	}
+
+	clientset, err := GetClientset()
+	if err != nil {
+		return err.Error()
+	}
+
+	// 重启 Deployment
+	_, err = clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), name, "application/strategic-merge-patch+json", []byte(`{"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt": "`+time.Now().Format(time.RFC3339)+`"}}}}}`), metav1.PatchOptions{})
+	if err != nil {
+		return err.Error()
+	}
+
+	return "Deployment restarted successfully"
 }
 
 func GetLogs(ns, podName, containerName string, msgConsumer func(string)) error {
