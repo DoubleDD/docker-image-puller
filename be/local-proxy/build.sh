@@ -3,6 +3,7 @@
 # 定义目标平台
 platforms=(
 	"windows/amd64"
+	"windows/arm64"
 	# "darwin/amd64"
 	"darwin/arm64"
 )
