@@ -128,7 +128,7 @@ func MergeImage(c *gin.Context) {
 	// }()
 
 	// 新开一个协程用来执行 docker tag、docker push等操作
-	err = docker.PushImage(outputFile, req.Image, req.Registry)
+	err = docker.PushImage(outputFile, req.Image, req.Registry, req.Push)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"msg": "合并镜像失败", "error": err})
 		return

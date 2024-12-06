@@ -18,4 +18,5 @@ type MergeRequest struct {
 	Manifest Manifest `json:"manifest"`
 	Image    string   `json:"image"`
 	Registry string   `json:"registry"`
+	Push     bool     `json:"push"`
 }
