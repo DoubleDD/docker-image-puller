@@ -44,6 +44,7 @@ export class DockerPullComponent implements OnInit {
   configContent: any = null;
   d = '';
   localProxy = false;
+  push = true;
   constructor(
     private dockerService: DockerService,
     private messageService: MessageService,
@@ -62,6 +63,7 @@ export class DockerPullComponent implements OnInit {
       this.d = urlParams.get('d') || '0';
       this.ns = urlParams.get('ns') || '';
       this.deployment = urlParams.get('dp') || '';
+      this.push = Boolean(urlParams.get('push') || 'true');
       this.imageUrl =
         urlParams.get('repository') ||
         'registry.cn-zhangjiakou.aliyuncs.com/ylns/nginx-empty:1.19.2';
@@ -132,7 +134,11 @@ export class DockerPullComponent implements OnInit {
 
         // 确保所有任务完成后再执行合并镜像
         return firstValueFrom(
-          this.dockerService.mergeImage(this.imageUrl, this.manifest),
+          this.dockerService.mergeImage(
+            this.imageUrl,
+            this.manifest,
+            this.push,
+          ),
         );
       })
       .then((_) => {

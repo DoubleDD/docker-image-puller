@@ -41,11 +41,17 @@ const proxy_server = 'http://localhost:7151';
 export class DockerService {
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3分钟的缓存时间（毫秒）
+  private enableCache = false;
 
   constructor(
     private http: HttpClient,
     private httpService: HttpService,
-  ) {}
+  ) {
+    const v = localStorage.getItem('cache.enable');
+    if (v === 'true') {
+      this.enableCache = true;
+    }
+  }
 
   getManifest(imageUrl: string): Observable<Manifest> {
     // 尝试从缓存获取
@@ -68,6 +74,9 @@ export class DockerService {
   }
 
   private getFromCache(imageUrl: string): Manifest | null {
+    if (!this.enableCache) {
+      return null;
+    }
     const cacheKey = this.CACHE_KEY_PREFIX + imageUrl;
     const cachedString = localStorage.getItem(cacheKey);
 
@@ -92,6 +101,9 @@ export class DockerService {
   }
 
   private saveToCache(imageUrl: string, manifest: Manifest): void {
+    if (!this.enableCache) {
+      return;
+    }
     const cacheKey = this.CACHE_KEY_PREFIX + imageUrl;
     const cacheData: CachedManifest = {
       manifest,
@@ -387,8 +399,18 @@ export class DockerService {
    * @param layers 层信息
    * @returns
    */
-  mergeImage(image: string, manifest: Manifest | null): Observable<any> {
-    return this.http.post('/dip/api/docker/merge', { image, manifest });
+  mergeImage(
+    image: string,
+    manifest: Manifest | null,
+    push: boolean,
+  ): Observable<any> {
+    const registry = localStorage.getItem('docker-registry') || '';
+    return this.http.post('/dip/api/docker/merge', {
+      image,
+      manifest,
+      push,
+      registry,
+    });
   }
   rollout(ns: string, deployment: string): Observable<any> {
     return this.http.get(`/dip/api/dp/rollout?ns=${ns}&name=${deployment}`);
