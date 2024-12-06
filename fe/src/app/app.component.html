@@ -1,3 +1,11 @@
+@if(showHomeButton){
+<!--Home按钮-->
+<div class="absolute top-6 left-12 z-30">
+  <a [routerLink]="['/docker']" [queryParams]="{ d: 1 }" class="text-2xl font-bold text-white cursor-pointer">
+    <i class="fa-solid fa-house"></i>
+  </a>
+</div>
+}
 <!--消息通知区域-->
 <app-notification></app-notification>
 <router-outlet />
