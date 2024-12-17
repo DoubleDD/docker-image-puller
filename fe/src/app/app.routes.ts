@@ -3,6 +3,14 @@ import { K8sLogsComponent } from './k8s-logs/k8s-logs.component';
 
 export const routes: Routes = [
   {
+    path: 'http-client',
+    title: 'Http Client',
+    loadComponent: () =>
+      import('./http-client/http-client.component').then(
+        (m) => m.HttpClientComponent,
+      ),
+  },
+  {
     path: 'pods',
     title: 'Pod List',
     loadComponent: () =>
