@@ -1,1 +1,105 @@
-<p>http-client works!</p>
+<div class="min-h-screen bg-gray-900 text-white">
+  <!-- 请求方法选择和 URL 输入框 -->
+  <div class="flex space-x-4 p-4 bg-gray-800 border-b border-gray-700">
+    <select [(ngModel)]="method"
+      class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+      <option>GET</option>
+      <option>POST</option>
+      <option>PUT</option>
+      <option>DELETE</option>
+      <option>OPTIONS</option>
+    </select>
+    <input type="text"
+      class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+      placeholder="Enter URL" [(ngModel)]="url" />
+    <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" (click)="sendRequest()">
+      <span>Send</span>
+      <i class="fas fa-paper-plane ml-2"></i>
+    </button>
+  </div>
+  <!-- 请求参数、请求头、请求体 -->
+  <div class="p-4 space-y-4">
+    <!-- 左右分栏布局 -->
+    <div class="flex space-x-4">
+      <!-- 左边：Headers -->
+      <div class="w-1/2">
+        <h3 class="text-lg font-semibold">Headers</h3>
+        <!-- 动态渲染 Headers -->
+        <div *ngFor="let header of headers; let i = index" class="grid grid-cols-3 gap-4 pb-2">
+          <input type="text"
+            class="px-4 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Key" [(ngModel)]="header.key" />
+          <input type="text"
+            class="px-4 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Value" [(ngModel)]="header.value" />
+          <button class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700" (click)="removeHeader(i)">
+            <!-- 删除图标 -->
+            <span>Remove</span>
+            <i class="fas fa-trash ml-2"></i>
+          </button>
+        </div>
+        <!-- 添加 Header 的输入框和按钮 -->
+        <div class="grid grid-cols-3 gap-4">
+          <input type="text"
+            class="px-4 py-2 bg-gray-500 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Key" [(ngModel)]="hk" />
+          <input type="text"
+            class="px-4 py-2 bg-gray-500 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Value" [(ngModel)]="hv" />
+          <button class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700" (click)="addHeader(hk, hv)">
+            <span>Add</span>
+            <i class="fas fa-plus ml-2"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 右边：Params -->
+      <div class="w-1/2">
+        <h3 class="text-lg font-semibold">Params</h3>
+        <!-- 动态渲染 Params -->
+        <div *ngFor="let param of params; let i = index" class="grid grid-cols-3 gap-4 pb-2">
+          <input type="text"
+            class="px-4 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Key" [(ngModel)]="param.key" />
+          <input type="text"
+            class="px-4 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Value" [(ngModel)]="param.value" />
+          <button class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700" (click)="removeParam(i)">
+            <span>Remove</span>
+            <i class="fas fa-trash ml-2"></i>
+          </button>
+        </div>
+        <!-- 添加 Param 的输入框和按钮 -->
+        <div class="grid grid-cols-3 gap-4">
+          <input type="text"
+            class="px-4 py-2 bg-gray-500 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Key" [(ngModel)]="pk" />
+          <input type="text"
+            class="px-4 py-2 bg-gray-500 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            placeholder="Value" [(ngModel)]="pv" />
+          <button class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700" (click)="addParam(pk, pv)">
+            <!-- 添加图标 -->
+            <span>Add</span>
+            <i class="fas fa-plus ml-2"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 请求参数、请求头、请求体 -->
+  <div class="p-4 space-y-4">
+    <!-- Body -->
+    <div>
+      <h3 class="text-lg font-semibold">Body</h3>
+      <textarea
+        class="w-full h-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+        placeholder="Request body"></textarea>
+    </div>
+  </div>
+
+  <!-- 响应区域 -->
+  <div class="p-4 bg-gray-800 border-t border-gray-700">
+    <h3 class="text-lg font-semibold">Response</h3>
+    <pre class="mt-4 p-4 bg-gray-700 border border-gray-600 rounded-md overflow-auto text-white">{{ response }}</pre>
+  </div>
+</div>
