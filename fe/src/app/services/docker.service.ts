@@ -441,6 +441,7 @@ export class DockerService {
       this.eventSource.addEventListener('done', (event) => {
         console.log('Done:', event.data);
         this.eventSource.close(); // 关闭 EventSource 连接
+        observer.complete();
       });
       this.eventSource.onerror = (error) => {
         console.log(error);

@@ -31,7 +31,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   //@ViewChild(DownloadProgressModalComponent)
   //downloadProgressModal!: DownloadProgressModalComponent;
 
-  // 定义 Tailwind CSS 的暗色背景颜色类数组
+  //定义 Tailwind CSS 的暗色背景颜色类数组
   private colors = [
     'bg-darkGreen',
     'bg-darkOrange',
@@ -45,49 +45,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   error = '';
   keyword = '';
   nsImages: NsImages[] = [];
-  data: NsImages[] = [
-    {
-      ns: '大平台',
-      color: this.getRandomColor(0),
-      deployments: [
-        {
-          name: 'nginx',
-          image: { name: 'nginx', description: 'nginx' },
-        },
-        {
-          name: 'ubuntu',
-          image: { name: 'ubuntu', description: 'ubuntu' },
-        },
-        {
-          name: 'java',
-          image: { name: 'openjdk', description: 'openjdk:17' },
-        },
-        {
-          name: 'golang',
-          image: { name: 'golang', description: 'golang:2.4', tag: '2.4' },
-        },
-        {
-          name: 'node',
-          image: { name: 'node', description: 'node:22.1', tag: '22.2' },
-        },
-      ],
-    },
-    {
-      ns: '资产门户',
-      color: this.getRandomColor(1),
-      deployments: [
-        {
-          name: 'busybox',
-          image: {
-            name: 'busybox',
-            tag: '1.19.2',
-            description:
-              '172.27.35.4:5000/yunli_mid_platform/busybox:latest-arm64',
-          },
-        },
-      ],
-    },
-  ];
+  data: NsImages[] = [];
   registry = 'registry.cn-zhangjiakou.aliyuncs.com';
   namespace = '';
   d = '';
@@ -108,7 +66,6 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       async (resp) => {
         const json = await resp.json();
         const arr: NsImages[] = [];
-        let i = 0;
         for (const key of json) {
           const dps: Deployment[] = [];
           (key.deployments as any[]).forEach((deployment) => {
@@ -130,7 +87,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
 
           arr.push({
             ns: key.ns,
-            color: this.getRandomColor(i++),
+            color: this.getRandomColor(),
             deployments: dps.sort((a, b) => a.name.localeCompare(b.name)),
           });
         }
@@ -149,9 +106,9 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   }
 
   // 生成随机颜色的方法
-  getRandomColor(index?: number) {
+  getRandomColor() {
     const random = Math.floor(Math.random() * 100) + 1;
-    return this.colors[(index || random) % this.colors.length];
+    return this.colors[random % this.colors.length];
   }
 
   focusSearchInput() {
@@ -173,7 +130,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       const deployments = v.deployments.filter(
         (e) =>
           e.name.indexOf(this.keyword.trim()) > -1 ||
-          (e.image.newImage && e.image.newImage.indexOf(this.keyword) > -1),
+          e.image.description.indexOf(this.keyword) > -1,
       );
       if (deployments.length > 0) {
         result.push({ ns: v.ns, color: v.color, deployments });

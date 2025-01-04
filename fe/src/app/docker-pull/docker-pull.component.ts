@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { DockerService, Manifest } from '../services/docker.service';
-import { FileSizePipe } from '../shared/pipes/file-size.pipe';
-import { MathFloorPipe } from '../shared/pipes/math-floor.pipe';
+import { now } from '../util/date';
 
 export interface Layer {
   digest: string;
@@ -18,13 +17,7 @@ export interface Layer {
 
 @Component({
   selector: 'app-docker-pull',
-  imports: [
-    RouterModule,
-    CommonModule,
-    FormsModule,
-    FileSizePipe,
-    MathFloorPipe,
-  ],
+  imports: [RouterModule, CommonModule, FormsModule],
   templateUrl: './docker-pull.component.html',
   styleUrl: './docker-pull.component.css',
 })
@@ -51,8 +44,12 @@ export class DockerPullComponent implements OnInit {
     this.ns = urlParams.get('ns') || '';
     this.deployment = urlParams.get('dp') || '';
     this.push = Boolean(urlParams.get('push') || 'true');
-    this.newImage = urlParams.get('newImage') || '';
+    let newImage = urlParams.get('newImage') || '';
     this.oldImage = urlParams.get('oldImage') || '';
+    // 给新镜像名称加上时间戳
+    if (newImage) {
+      this.newImage = newImage + '.' + now();
+    }
   }
 
   async fetchManifest() {
@@ -97,9 +94,11 @@ export class DockerPullComponent implements OnInit {
 
   async handlePullImage() {
     this.logs = [];
-    this.dockerService
-      .pullImage(this.newImage, this.oldImage)
-      .subscribe((log) => this.addLog(log));
+    this.isProcessing = true;
+    this.dockerService.pullImage(this.newImage, this.oldImage).subscribe({
+      next: (log) => this.addLog(log),
+      complete: () => (this.isProcessing = false),
+    });
   }
 
   private addLog(log: string) {
