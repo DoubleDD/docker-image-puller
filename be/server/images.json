@@ -1,0 +1,32 @@
+[
+    {
+        "ns": "大平台",
+        "deployments": [
+            {
+                "name": "大平台——后端",
+                "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-ecology-portal-b:1.0.0-dev-hk",
+                "new": "yunli.habor/yunli/gansu-ecology-portal-b:1.0.0-dev-hk"
+            },
+            {
+                "name": "大平台——前端",
+                "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-administration-fe:1.0.0.dev",
+                "new": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-administration-fe:1.0.0.dev-test"
+            }
+        ]
+    },
+    {
+        "ns": "资产门户",
+        "deployments": [
+            {
+                "name": "资产门户——后端",
+                "old": "123",
+                "new": "abc"
+            },
+            {
+                "name": "资产门户——前端",
+                "old": "123",
+                "new": "abc"
+            }
+        ]
+    }
+]

@@ -9,12 +9,13 @@ import (
 )
 
 type NamespaceImages struct {
-	Namespace   string
-	Deployments []Deployment
+	Namespace   string       `json:"ns"`
+	Deployments []Deployment `json:"deployments"`
 }
 type Deployment struct {
-	ImageName string
-	Name      string
+	ImageName string `json:"old"`
+	Name      string `json:"name"`
+	NewImage  string `json:"new"`
 }
 
 func GetImagesBack(namespace string) ([]NamespaceImages, error) {

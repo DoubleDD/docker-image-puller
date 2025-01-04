@@ -28,6 +28,7 @@ func SetupRouter() *gin.Engine {
 		dip.GET("/api/docker/blob/chunk/pre", handlers.UploadBlobChunkInitiate)
 		dip.POST("/api/docker/blob/chunk", handlers.UploadBlobChunk)
 		dip.POST("/api/docker/merge", handlers.MergeImage)
+		dip.GET("/api/docker/pull", handlers.PullImage)
 	}
 	return r
 }

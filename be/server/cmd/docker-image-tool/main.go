@@ -20,6 +20,9 @@ func main() {
 
 	// 启动服务
 	log.Printf("Server starting on port %s", cfg.Port)
-	r.Run(":" + cfg.Port)
+	err := r.Run(":" + cfg.Port)
+	if err != nil {
+		return
+	}
 
 }
