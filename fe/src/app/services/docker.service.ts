@@ -39,6 +39,8 @@ const proxy_server = 'http://localhost:7151';
   providedIn: 'root',
 })
 export class DockerService {
+  private eventSource!: EventSource;
+
   private readonly CACHE_KEY_PREFIX = 'docker_manifest_';
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3分钟的缓存时间（毫秒）
   private enableCache = false;
@@ -425,5 +427,30 @@ export class DockerService {
         }),
       ),
     );
+  }
+
+  pullImage(newImage: string, oldImage: string): Observable<any> {
+    return new Observable((observer) => {
+      this.eventSource = new EventSource(
+        `/dip/api/docker/pull?newImage=${newImage}&oldImage=${oldImage}`,
+      );
+      this.eventSource.addEventListener('message', (event) => {
+        observer.next(event.data);
+      });
+      // 监听 done 事件
+      this.eventSource.addEventListener('done', (event) => {
+        console.log('Done:', event.data);
+        this.eventSource.close(); // 关闭 EventSource 连接
+      });
+      this.eventSource.onerror = (error) => {
+        console.log(error);
+        observer.error(error);
+      };
+
+      return () => {
+        // unsubscribed 时被调用
+        this.eventSource.close();
+      };
+    });
   }
 }

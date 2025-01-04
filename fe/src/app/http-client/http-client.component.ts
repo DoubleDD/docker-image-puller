@@ -63,25 +63,26 @@ export class HttpClientComponent {
 
   // 发送请求
   sendRequest() {
-    try {
-      // 构建请求头
-      const headers = new Headers();
-      this.headers.forEach((header) => {
-        headers.append(header.key, header.value);
-      });
+    this.response = '';
+    // 构建请求头
+    const headers = new Headers();
+    this.headers.forEach((header) => {
+      headers.append(header.key, header.value);
+    });
 
-      // 构建请求参数（仅适用于 GET 请求）
-      const queryParams = new URLSearchParams(
-        this.convertParamsToRecord(this.params),
-      ).toString();
-      const fullUrl = queryParams ? `${this.url}?${queryParams}` : this.url;
+    // 构建请求参数（仅适用于 GET 请求）
+    const queryParams = new URLSearchParams(
+      this.convertParamsToRecord(this.params),
+    ).toString();
+    const fullUrl = queryParams ? `${this.url}?${queryParams}` : this.url;
 
-      // 发送请求
-      fetch(fullUrl, {
-        method: this.method,
-        headers: headers,
-        body: this.method === 'GET' ? null : this.body, // GET 请求没有请求体
-      }).then(async (response) => {
+    // 发送请求
+    fetch(fullUrl, {
+      method: this.method,
+      headers: headers,
+      body: this.method === 'GET' ? null : this.body, // GET 请求没有请求体
+    })
+      .then(async (response) => {
         const firstLine =
           'HTTP/1.1 ' + response.status + ' ' + response.statusText;
         let respHeaders = '';
@@ -92,10 +93,9 @@ export class HttpClientComponent {
         // 解析响应
         const data = await response.text();
         this.response = firstLine + '\n' + respHeaders + '\n' + data;
+      })
+      .catch((e) => {
+        this.response = '请求异常：' + e;
       });
-    } catch (error) {
-      console.error('Error sending request:', error);
-      this.response = { error: 'Failed to fetch data' };
-    }
   }
 }

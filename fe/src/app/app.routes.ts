@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { K8sLogsComponent } from './k8s-logs/k8s-logs.component';
 
 export const routes: Routes = [
-  {
+    {
     path: 'http-client',
     title: 'Http Client',
     loadComponent: () =>

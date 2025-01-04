@@ -17,6 +17,8 @@ export interface Image {
   name: string;
   tag?: string;
   description: string;
+  oldImage?: string;
+  newImage?: string;
 }
 
 @Component({
@@ -45,7 +47,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   nsImages: NsImages[] = [];
   data: NsImages[] = [
     {
-      ns: 'default',
+      ns: '大平台',
       color: this.getRandomColor(0),
       deployments: [
         {
@@ -71,7 +73,7 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
       ],
     },
     {
-      ns: 'ylns',
+      ns: '资产门户',
       color: this.getRandomColor(1),
       deployments: [
         {
@@ -109,27 +111,25 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
         let i = 0;
         for (const key of json) {
           const dps: Deployment[] = [];
-          (key.Deployments as any[]).forEach((deployment) => {
-            const imageUrl = deployment.ImageName;
-            const imageArr = imageUrl.split('\n');
-            for (const image of imageArr) {
-              const item = parseDockerImage(image);
-              const imageName = item.image;
-              const tag = item.tag || '';
-              const dp = {
-                name: deployment.Name,
-                image: {
-                  name: imageName,
-                  description: image,
-                  tag: tag,
-                },
-              };
-              dps.push(dp);
-            }
+          (key.deployments as any[]).forEach((deployment) => {
+            const imageUrl = deployment.old;
+            const item = parseDockerImage(imageUrl);
+            const tag = item.tag || '';
+            const dp = {
+              name: deployment.name,
+              image: {
+                name: deployment.name,
+                description: imageUrl,
+                tag: tag,
+                oldImage: imageUrl,
+                newImage: deployment['new'],
+              },
+            };
+            dps.push(dp);
           });
 
           arr.push({
-            ns: key.Namespace,
+            ns: key.ns,
             color: this.getRandomColor(i++),
             deployments: dps.sort((a, b) => a.name.localeCompare(b.name)),
           });
@@ -164,10 +164,16 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
   }
 
   search() {
+    if (!this.keyword.trim()) {
+      this.nsImages = [...this.data];
+      return;
+    }
     const result: NsImages[] = [];
     this.data.forEach((v) => {
       const deployments = v.deployments.filter(
-        (e) => e.image.description.indexOf(this.keyword) > -1,
+        (e) =>
+          e.name.indexOf(this.keyword.trim()) > -1 ||
+          (e.image.newImage && e.image.newImage.indexOf(this.keyword) > -1),
       );
       if (deployments.length > 0) {
         result.push({ ns: v.ns, color: v.color, deployments });
@@ -177,16 +183,19 @@ export class DockerImagesComponent implements OnInit, AfterViewInit {
     this.nsImages = result;
   }
 
-  goToDetail(ns: string, deploymentName: string, imageName: string) {
+  goToDetail(
+    ns: string,
+    deploymentName: string,
+    oldImage?: string,
+    newImage?: string,
+  ) {
     this.router.navigate(['/detail'], {
       queryParams: {
         d: this.d,
         ns: ns,
         dp: deploymentName,
-        repository: imageName.replace(
-          '172.27.35.4:5000',
-          'registry.cn-zhangjiakou.aliyuncs.com',
-        ),
+        newImage: newImage,
+        oldImage: oldImage,
       },
     });
   }
