@@ -3,8 +3,8 @@
 # 定义目标平台
 platforms=(
 	"linux/amd64"
-	"linux/arm64"
-	"darwin/arm64"
+	# "linux/arm64"
+	# "darwin/arm64"
 )
 
 # 定义输出目录
