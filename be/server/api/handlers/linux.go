@@ -7,5 +7,5 @@ import (
 )
 
 func UpdateService(c *gin.Context) {
-	linux.UpdateService()
+	linux.TriggerUpdate()
 }
