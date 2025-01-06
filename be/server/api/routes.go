@@ -30,6 +30,7 @@ func SetupRouter() *gin.Engine {
 		dip.POST("/api/docker/merge", handlers.MergeImage)
 		dip.GET("/api/docker/pull", handlers.PullImage)
 		dip.POST("/api/docker/images", handlers.PostDockerImages)
+		dip.POST("/api/service/update", handlers.PostDockerImages)
 	}
 	return r
 }

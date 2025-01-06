@@ -22,6 +22,11 @@ func main() {
 			//卸载服务
 			fmt.Println("卸载k docker-tools 服务")
 			linux.UninstallService()
+		case "update":
+			// 执行更新逻辑
+			if err := linux.UpdateService(); err != nil {
+				log.Fatalf("Update failed: %v", err)
+			}
 		default:
 
 		}

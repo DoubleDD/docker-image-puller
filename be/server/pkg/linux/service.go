@@ -223,3 +223,84 @@ func copyFile(src, dst string) error {
 	log.Println("File copied successfully.")
 	return nil
 }
+
+func UpdateService() error {
+	log.Println("Starting service update...")
+
+	// 停止服务
+	log.Println("Stopping service...")
+	stopCmd := exec.Command("systemctl", "stop", "docker-tools.service")
+	if err := stopCmd.Run(); err != nil {
+		log.Printf("Failed to stop service: %v\n", err)
+		return fmt.Errorf("failed to stop service: %v", err)
+	}
+	log.Println("Service stopped successfully.")
+
+	// 替换程序
+	log.Println("Replacing program...")
+	if err := replaceProgram(); err != nil {
+		log.Printf("Failed to replace program: %v\n", err)
+		return fmt.Errorf("failed to replace program: %v", err)
+	}
+	log.Println("Program replaced successfully.")
+
+	// 启动服务
+	log.Println("Starting service...")
+	startCmd := exec.Command("systemctl", "start", "docker-tools.service")
+	if err := startCmd.Run(); err != nil {
+		log.Printf("Failed to start service: %v\n", err)
+		return fmt.Errorf("failed to start service: %v", err)
+	}
+	log.Println("Service started successfully.")
+
+	log.Println("Service update completed.")
+	return nil
+}
+
+// 替换程序
+func replaceProgram() error {
+	// 获取当前程序的路径
+	currentProgramPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get current program path: %v", err)
+	}
+
+	// 备份当前程序
+	backupPath := currentProgramPath + ".bak"
+	log.Printf("Backing up current program to %s...\n", backupPath)
+	if err := os.Rename(currentProgramPath, backupPath); err != nil {
+		return fmt.Errorf("failed to backup current program: %v", err)
+	}
+
+	// 替换当前程序
+	newProgramPath := "/opt/docker-tools/docker-tools-new"
+	log.Printf("Replacing current program with new program...\n")
+	if err := os.Rename(newProgramPath, currentProgramPath); err != nil {
+		// 如果替换失败，尝试恢复备份
+		if err := os.Rename(backupPath, currentProgramPath); err != nil {
+			log.Printf("Failed to restore backup: %v\n", err)
+		}
+		return fmt.Errorf("failed to replace current program: %v", err)
+	}
+
+	return nil
+}
+
+// 触发更新
+func TriggerUpdate() error {
+	// 获取当前程序的路径
+	currentProgramPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get current program path: %v", err)
+	}
+
+	// 启动子进程执行更新逻辑
+	log.Println("Starting update process...")
+	updateCmd := exec.Command(currentProgramPath, "update")
+	if err := updateCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start update process: %v", err)
+	}
+	log.Println("Update process started.")
+
+	return nil
+}
