@@ -145,8 +145,6 @@ func AddImage(ns, name, oldImage, newImage string) error {
 		}
 		data = append(data, image)
 	}
-	fmt.Println(data)
-
 	// 将更新后的数据编码为 JSON
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {

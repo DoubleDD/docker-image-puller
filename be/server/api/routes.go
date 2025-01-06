@@ -3,8 +3,6 @@ package api
 import (
 	"docker-image-handler/api/handlers"
 	"docker-image-handler/middleware"
-	"fmt"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,22 +10,6 @@ import (
 func SetupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-
-	// 自定义日志格式
-	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		// 自定义日志格式
-		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
-			param.ClientIP,
-			param.TimeStamp.Format(time.RFC1123),
-			param.Method,
-			param.Path,
-			param.Request.Proto,
-			param.StatusCode,
-			param.Latency,
-			param.Request.UserAgent(),
-			param.ErrorMessage,
-		)
-	}))
 
 	// 使用中间件
 	r.Use(middleware.CORS())

@@ -53,20 +53,5 @@
         "new": "10.62.210.203:8088/yunli/gansu-resource-portal-web-fe:v2.prod.1.1.0"
       }
     ]
-  },
-  {
-    "ns": "Default",
-    "deployments": [
-      {
-        "old": "123",
-        "name": "asdfasdf",
-        "new": "123"
-      },
-      {
-        "old": "falksdjflasdjkf",
-        "name": "测试",
-        "new": "法律；水库的风景；alksdjflaskdjf"
-      }
-    ]
   }
 ]
