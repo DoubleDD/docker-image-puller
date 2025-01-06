@@ -1,7 +1,7 @@
 {
   "/dip/": {
-    "target_local": "http://localhost:7152",
-    "target": "http://60.13.54.71:30119",
+    "target": "http://localhost:7152",
+    "target1": "http://60.13.54.71:30119",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

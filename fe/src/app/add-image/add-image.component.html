@@ -1,0 +1,62 @@
+<div class="min-h-screen py-8">
+  <div class="container mx-auto p-4 max-w-full">
+    <div class="shadow-lg rounded-xl p-8">
+      <div class="flex items-center gap-3 mb-8">
+        <i class="fab fa-docker text-3xl text-blue-500"></i>
+        <h2 class="text-2xl font-bold text-white mr-2">Add Dokcer Image</h2>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-8 rounded-lg shadow-md w-full max-w-5xl">
+        <!-- Name Field -->
+        <div class="mb-12">
+          <label class="block text-sm font-bold mb-2" for="name"> Name </label>
+          <input
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="name" type="text" formControlName="name"/>
+          <div *ngIf="form.get('name')?.invalid && form.get('name')?.touched" class="text-red-500 text-sm mt-1">
+            Name is required.
+          </div>
+        </div>
+
+        <div class="mb-12">
+          <label class="block text-sm font-bold mb-2" for="email">
+            Old Image
+          </label>
+          <input
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="oldImage" type="text" formControlName="oldImage" />
+          <div *ngIf="
+              form.get('oldImage')?.invalid && form.get('oldImage')?.touched
+            " class="text-red-500 text-sm mt-1">
+            oldImage is required.
+          </div>
+        </div>
+
+        <div class="mb-12">
+          <label class="block text-sm font-bold mb-2" for="message">
+            New Image
+          </label>
+          <input
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="newImage" type="text" formControlName="newImage" />
+          <div *ngIf="
+              form.get('newImage')?.invalid && form.get('newImage')?.touched
+            " class="text-red-500 text-sm mt-1">
+            newImage is required.
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-between">
+          <button
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="submit" [disabled]="form.invalid">
+            Submit
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

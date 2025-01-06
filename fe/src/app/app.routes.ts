@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { K8sLogsComponent } from './k8s-logs/k8s-logs.component';
 
 export const routes: Routes = [
-    {
+  {
     path: 'http-client',
     title: 'Http Client',
     loadComponent: () =>
@@ -20,6 +20,14 @@ export const routes: Routes = [
     path: 'logs',
     title: 'Pod Logs',
     component: K8sLogsComponent,
+  },
+  {
+    path: 'docker-add',
+    title: 'Add Docker Images',
+    loadComponent: () =>
+      import('./add-image/add-image.component').then(
+        (m) => m.AddImageComponent,
+      ),
   },
   {
     path: 'docker',

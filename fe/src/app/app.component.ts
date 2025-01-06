@@ -67,7 +67,7 @@ export class AppComponent implements AfterViewInit, OnInit, OnDestroy {
 
   isSpecificRoute(url: string): boolean {
     // 要显示home按钮的路由
-    const specificRoutes = ['/detail'];
+    const specificRoutes = ['/detail', '/docker-add'];
     return specificRoutes.includes(url);
   }
 }
