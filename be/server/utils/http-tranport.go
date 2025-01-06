@@ -11,7 +11,7 @@ import (
 
 // 自定义的 RoundTripper，用于拦截请求和响应
 type LoggingRoundTripper struct {
-	Transport http.RoundTripper
+	Proxied http.RoundTripper
 }
 
 // 实现 RoundTripper 接口的 RoundTrip 方法
@@ -34,13 +34,13 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	fmt.Println()
 
 	// 调用原始 Transport（如果没有则使用默认 Transport）
-	transport := lrt.Transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
+	// transport := lrt.Transport
+	// if transport == nil {
+	// 	transport = http.DefaultTransport
+	// }
 
 	// 发送请求
-	resp, err := transport.RoundTrip(req)
+	resp, err := lrt.Proxied.RoundTrip(req)
 
 	// 打印响应行和响应头
 	if err != nil {

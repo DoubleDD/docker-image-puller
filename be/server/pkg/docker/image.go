@@ -97,21 +97,79 @@ func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) err
 
 func GetImages() ([]k8s.NamespaceImages, error) {
 	var data []k8s.NamespaceImages
-	// 打开JSON文件
-	file, err := os.Open("images.json")
+	// 读取文件内容
+	filePath := "images.json"
+	fileData, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("打开文件错误:", err)
-		return data, err
+		return data, fmt.Errorf("failed to read file: %w", err)
 	}
-	defer file.Close()
 
-	// 解析JSON数据到结构体
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&data); err != nil {
-		fmt.Println("解析JSON错误:", err)
-		return data, err
+	// 解析 JSON 数据
+	if len(fileData) > 0 { // 如果文件不为空，则解析
+		if err := json.Unmarshal(fileData, &data); err != nil {
+			return data, fmt.Errorf("failed to unmarshal JSON: %w", err)
+		}
 	}
 	return data, nil
+}
+
+func AddImage(ns, name, oldImage, newImage string) error {
+	data, err := GetImages()
+	if err != nil {
+		return err
+	}
+
+	if hasNs(ns, data) {
+		for i := 0; i < len(data); i++ {
+			if ns == data[i].Namespace { // 直接通过索引访问切片元素
+				ni := k8s.Deployment{
+					Name:      name,
+					ImageName: oldImage,
+					NewImage:  newImage,
+				}
+				// 直接修改切片中的元素
+				data[i].Deployments = append(data[i].Deployments, ni)
+				break
+			}
+		}
+	} else {
+		image := k8s.NamespaceImages{
+			Namespace: ns,
+			Deployments: []k8s.Deployment{
+				{
+					Name:      name,
+					ImageName: oldImage,
+					NewImage:  newImage,
+				},
+			},
+		}
+		data = append(data, image)
+	}
+	fmt.Println(data)
+
+	// 将更新后的数据编码为 JSON
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	filePath := "images.json"
+	// 写回文件
+	if err := os.WriteFile(filePath, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
+func hasNs(ns string, images []k8s.NamespaceImages) bool {
+	for i := 0; i < len(images); i++ {
+		item := images[i]
+		if ns == item.Namespace {
+
+			return true
+		}
+	}
+	return false
 }
 
 func execCmd(stdOutFn func(string), name string, args ...string) error {

@@ -3,24 +3,29 @@
     "ns": "大平台",
     "deployments": [
       {
-        "name": "大平台—后端",
         "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-ecology-portal-b:1.0.0-dev-hk",
+        "name": "大平台—后端",
         "new": "yunli.habor/yunli/gansu-ecology-portal-b:1.0.0-dev-hk"
       },
       {
-        "name": "大平台—前端(tag待修改)",
-        "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-appcenter-web:latest",
-        "new": "yunli.harbor.com:10443/yunli/gansu-appcenter-web:latest"
+        "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-appcenter-web:2.0.0.hk",
+        "name": "大平台—前端",
+        "new": "yunli.harbor.com:10443/yunli/gansu-appcenter-web:2.0.0.hk"
       },
       {
-        "name": "智能中台大屏(tag待修改)",
-        "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-bigdata-platform-ai-center:2025-01-03-18-35-16",
-        "new": "yunli.harbor.com:10443/yunli/gansu-bigdata-platform-ai-center:2025-01-03-18-35-16"
+        "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-bigdata-platform-ai-center:latest",
+        "name": "智能中台大屏",
+        "new": "yunli.harbor.com:10443/yunli/gansu-bigdata-platform-ai-center:latest"
       },
       {
-        "name": "一张图—前端(tag待修改)",
-        "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-water-onemap-fe:lastest",
-        "new": "yunli.harbor.com:10443/yunli/gansu-water-onemap-fe:lastest"
+        "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-water-onemap-fe:develop",
+        "name": "一张图—前端",
+        "new": "yunli.harbor.com:10443/yunli/gansu-water-onemap-fe:develop"
+      },
+      {
+        "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-water-onemap-fe:develop-pre",
+        "name": "一张图—前端-pre",
+        "new": "yunli.harbor.com:10443/yunli/gansu-water-onemap-fe:develop-pre"
       }
     ]
   },
@@ -28,24 +33,39 @@
     "ns": "资产门户",
     "deployments": [
       {
-        "name": "资产门户—后端-gateway",
         "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-administration-fe:bootstrap-portal-gateway-1.1.0",
+        "name": "资产门户—后端-gateway",
         "new": "10.62.210.203:8088/yunli/bootstrap-portal-gateway:1.1.0"
       },
       {
-        "name": "资产门户—后端-server",
         "old": "registry.cn-zhangjiakou.aliyuncs.com/yunli/gansu-administration-fe:bootstrap-portal-server-1.1.0",
+        "name": "资产门户—后端-server",
         "new": "10.62.210.203:8088/yunli/bootstrap-portal-server:1.1.0"
       },
       {
-        "name": "资产门户—前端-pre",
         "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-resource-portal-web-fe:v2.pre.1.1.0",
+        "name": "资产门户—前端-pre",
         "new": "10.62.210.203:8088/yunli/gansu-resource-portal-web-fe:v2.pre.1.1.0"
       },
       {
-        "name": "资产门户—前端-prod",
         "old": "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/gansu-resource-portal-web-fe:v2.prod.1.1.0",
+        "name": "资产门户—前端-prod",
         "new": "10.62.210.203:8088/yunli/gansu-resource-portal-web-fe:v2.prod.1.1.0"
+      }
+    ]
+  },
+  {
+    "ns": "Default",
+    "deployments": [
+      {
+        "old": "123",
+        "name": "asdfasdf",
+        "new": "123"
+      },
+      {
+        "old": "falksdjflasdjkf",
+        "name": "测试",
+        "new": "法律；水库的风景；alksdjflaskdjf"
       }
     ]
   }

@@ -40,3 +40,20 @@ func PullImage(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "ok"})
 }
+
+func PostDockerImages(c *gin.Context) {
+	ns := c.PostForm("ns")
+	name := c.PostForm("name")
+	oldImage := c.PostForm("oldImage")
+	newImage := c.PostForm("newImage")
+	if ns == "" {
+		ns = "Default"
+	}
+
+	err := docker.AddImage(ns, name, oldImage, newImage)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": "ok"})
+}
