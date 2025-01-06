@@ -4,6 +4,7 @@ import (
 	"docker-image-handler/api"
 	"docker-image-handler/config"
 	"docker-image-handler/pkg/linux"
+	"fmt"
 	"log"
 	"os"
 )
@@ -15,9 +16,11 @@ func main() {
 		switch os.Args[1] {
 		case "install":
 			//安装服务
+			fmt.Println("安装 docker-tools 服务")
 			linux.InstallService()
 		case "uninstall":
-			//安装服务
+			//卸载服务
+			fmt.Println("卸载k docker-tools 服务")
 			linux.UninstallService()
 		default:
 
