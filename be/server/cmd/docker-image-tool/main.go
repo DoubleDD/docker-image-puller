@@ -3,17 +3,30 @@ package main
 import (
 	"docker-image-handler/api"
 	"docker-image-handler/config"
-	"docker-image-handler/utils"
+	"docker-image-handler/pkg/linux"
 	"log"
-	"net/http"
+	"os"
 )
 
 func main() {
+	if len(os.Args) == 1 {
+		server()
+	} else {
+		switch os.Args[1] {
+		case "install":
+			//安装服务
+			linux.InstallService()
+		case "uninstall":
+			//安装服务
+			linux.UninstallService()
+		default:
+
+		}
+	}
+}
+func server() {
 	// 加载配置
 	cfg := config.Load()
-
-	// 设置 DefaultClient 的 Transport 为我们的 LoggingRoundTripper
-	http.DefaultClient.Transport = &utils.LoggingRoundTripper{}
 
 	// 初始化路由
 	r := api.SetupRouter()
