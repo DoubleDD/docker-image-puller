@@ -31,6 +31,9 @@ func SetupRouter() *gin.Engine {
 		dip.GET("/api/docker/pull", handlers.PullImage)
 		dip.POST("/api/docker/images", handlers.PostDockerImages)
 		dip.POST("/api/service/update", handlers.UpdateService)
+
+		dip.GET("/minio/buckets", handlers.MinioBuckets)
+		dip.GET("/minio/files", handlers.MinioFiles)
 	}
 	return r
 }

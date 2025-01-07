@@ -6,6 +6,13 @@ type Config struct {
 	DefaultPassword     string
 	DefaultPushRegistry string
 	DefaultPullRegistry string
+	Minio               MinioConfig
+}
+
+type MinioConfig struct {
+	Endpoint string
+	Username string
+	Password string
 }
 
 func Load() *Config {
@@ -15,5 +22,10 @@ func Load() *Config {
 		DefaultPassword:     "kedong@123",
 		DefaultPushRegistry: "172.27.35.4:5000",
 		DefaultPullRegistry: "registry.hub.docker.com",
+		Minio: MinioConfig{
+			Endpoint: "http://127.0.0.1:9000",
+			Username: "admin",
+			Password: "minio@Yunli123",
+		},
 	}
 }

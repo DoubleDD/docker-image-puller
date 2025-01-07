@@ -3,6 +3,14 @@ import { K8sLogsComponent } from './k8s-logs/k8s-logs.component';
 
 export const routes: Routes = [
   {
+    path: 'file-manager',
+    title: 'File Manager',
+    loadComponent: () =>
+      import('./file-manager/file-manager.component').then(
+        (m) => m.FileManagerComponent,
+      ),
+  },
+  {
     path: 'http-client',
     title: 'Http Client',
     loadComponent: () =>
