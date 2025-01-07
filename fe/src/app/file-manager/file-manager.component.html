@@ -1,20 +1,18 @@
 <div class="flex h-screen bg-gray-800 text-white">
   <!-- 左侧 Bucket 列表 -->
-  <div class="w-1/6 bg-gray-900 p-4 border-r border-gray-700">
+  <div class="w-1/5 bg-gray-900 p-4 border-r border-gray-700">
     <h1 class="text-2xl font-bold mb-6">MinIO File Manager</h1>
     <h2 class="text-xl font-semibold mb-4">Buckets</h2>
     <ul class="space-y-2">
-      <li *ngFor="let bucket of buckets"
-          [ngClass]="{ 'bg-gray-700': bucket === currentBucket }"
-          class="cursor-pointer hover:bg-gray-700 p-2 rounded transition-colors duration-200"
-          (click)="loadFiles(bucket)">
+      <li *ngFor="let bucket of buckets" [ngClass]="{ 'bg-gray-700': bucket === currentBucket }"
+        class="cursor-pointer hover:bg-gray-700 p-2 rounded transition-colors duration-200" (click)="loadFiles(bucket)">
         {{ bucket }}
       </li>
     </ul>
   </div>
 
-  <!-- 右侧文件列表和元数据 -->
-  <div class="flex-1 p-4 overflow-y-auto">
+  <!-- 中间文件列表 -->
+  <div class="flex-1 p-4 overflow-y-auto border-r border-gray-700">
     <!-- 文件路径导航 -->
     <div class="mb-6">
       <h2 class="text-xl font-semibold mb-4">
@@ -31,36 +29,58 @@
       </h2>
     </div>
 
-    <!-- 文件列表 -->
+    <!-- 文件列表（表格布局） -->
     <div class="mb-6">
-      <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- 表头 -->
+      <div class="grid grid-cols-3 gap-4 p-2 bg-gray-700 rounded-t-lg">
+        <div class="font-semibold">文件名</div>
+        <div class="font-semibold">最后更新时间</div>
+        <div class="font-semibold">文件大小</div>
+      </div>
+
+      <!-- 文件列表内容 -->
+      <ul class="space-y-2">
         <li *ngFor="let file of files"
-            class="cursor-pointer hover:bg-gray-700 p-4 rounded-lg transition-colors duration-200"
-            (click)="getMetadata(currentBucket, file)">
-          <div class="flex items-center">
-            <span class="text-lg">{{ file.name.substring(currentPrefix.length) }}</span>
+          class="cursor-pointer hover:bg-gray-700 p-2 rounded-lg transition-colors duration-200"
+          (click)="getMetadata(currentBucket, file)">
+          <div class="grid grid-cols-3 gap-4 items-center">
+            <!-- 文件名 -->
+            <div class="flex items-center">
+              <i *ngIf="file.name.endsWith('/')" class="fas fa-folder text-yellow-400 text-lg mr-2"></i>
+              <i *ngIf="!file.name.endsWith('/')" class="fas fa-file text-blue-400 text-lg mr-2"></i>
+              <span class="text-lg">{{
+                file.name.substring(currentPrefix.length)
+                }}</span>
+            </div>
+            <!-- 最后更新时间 -->
+            <div class="text-lg">
+              {{ file.lastModified | date: "yyyy-MM-dd HH:mm" }}
+            </div>
+            <!-- 文件大小 -->
+            <div class="text-lg">{{ file.size | fileSize }}</div>
           </div>
         </li>
       </ul>
     </div>
+  </div>
 
-    <!-- 文件元数据 -->
-    <div *ngIf="metadata" class="mb-6">
-      <h2 class="text-xl font-semibold mb-4">Metadata</h2>
-      <div class="bg-gray-900 p-4 rounded-lg">
-        <pre class="whitespace-pre-wrap">{{ metadata | json }}</pre>
-      </div>
+  <!-- 右侧元数据区域 -->
+  <div *ngIf="metadata" class="w-1/4 bg-gray-900 p-4 overflow-y-auto">
+    <h2 class="text-xl font-semibold mb-4">Metadata</h2>
+    <div class="bg-gray-800 p-4 rounded-lg">
+      <pre class="whitespace-pre-wrap">{{ metadata | json }}</pre>
     </div>
   </div>
 
   <!-- 悬浮的圆形 Upload 按钮 -->
   <div class="fixed bottom-8 right-8">
     <label for="file-upload" class="cursor-pointer">
-      <div class="bg-blue-600 hover:bg-blue-700 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200">
-        <!--<i class="fas fa-plus text-white text-2xl"></i>-->
+      <div
+        class="bg-blue-600 hover:bg-blue-700 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200">
         <i class="fas fa-cloud-upload-alt text-white text-2xl"></i>
       </div>
     </label>
-    <input #fileInput id="file-upload" type="file" (change)="onFileSelected($event)" (click)="check($event)" class="hidden" multiple webkitdirectory />
+    <input #fileInput id="file-upload" type="file" (change)="onFileSelected($event)" (click)="check($event)"
+      class="hidden" multiple webkitdirectory />
   </div>
 </div>

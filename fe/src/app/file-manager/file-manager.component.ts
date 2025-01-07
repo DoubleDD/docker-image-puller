@@ -2,10 +2,11 @@ import { Component, ViewChild } from '@angular/core';
 import { MinioService } from '../services/minio.service';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
+import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 
 @Component({
   selector: 'app-file-manager',
-  imports: [CommonModule, JsonPipe],
+  imports: [CommonModule, JsonPipe, FileSizePipe],
   templateUrl: './file-manager.component.html',
   styleUrl: './file-manager.component.scss',
 })
@@ -16,7 +17,7 @@ export class FileManagerComponent {
   files: any[] = [];
   currentBucket: string = '';
   currentPrefix: string = '';
-  metadata: any = {};
+  metadata: any = null;
   splitPrefix: string[] = [];
 
   constructor(private minioService: MinioService) {}
@@ -52,13 +53,35 @@ export class FileManagerComponent {
       .filter((part) => part.length > 0);
     this.minioService.listFiles(bucket, prefix).subscribe(
       (response: any) => {
-        this.files = response;
-        this.metadata = {};
+        this.files = this.sortFiles(response);
+        this.metadata = null;
       },
       (error) => {
         console.error('Error loading files:', error);
       },
     );
+  }
+  /**
+   * 对文件列表进行排序
+   * 1. 文件夹排在前面，文件排在后面
+   * 2. 每个类型中按字母顺序排序
+   */
+  sortFiles(files: any[]): any[] {
+    return files.sort((a, b) => {
+      const isFolderA = a.name.endsWith('/');
+      const isFolderB = b.name.endsWith('/');
+
+      // 如果 a 是文件夹而 b 是文件，a 排在前面
+      if (isFolderA && !isFolderB) {
+        return -1;
+      }
+      // 如果 a 是文件而 b 是文件夹，b 排在前面
+      if (!isFolderA && isFolderB) {
+        return 1;
+      }
+      // 如果都是文件夹或都是文件，按字母顺序排序
+      return a.name.localeCompare(b.name);
+    });
   }
 
   // 获取文件元数据
