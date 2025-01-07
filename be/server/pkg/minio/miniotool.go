@@ -4,10 +4,12 @@ import (
 	"context"
 	"docker-image-handler/config"
 	"fmt"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"io"
 	"log"
 	"sync"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type Tool struct {
@@ -73,4 +75,30 @@ func (c *Tool) ListObjects(bucket, prefix string) ([]string, error) {
 		result = append(result, object.Key)
 	}
 	return result, nil
+}
+
+func (c *Tool) GetMetadata(bucket, object string) (minio.ObjectInfo, error) {
+	return c.client.StatObject(c.ctx, bucket, object, minio.StatObjectOptions{})
+}
+
+func (c *Tool) UploadFile(bucket, object, fileName, fileContentType string, fileSize int64, fileReader io.Reader) (map[string]any, error) {
+	uploadInfo, err := c.client.PutObject(
+		c.ctx,
+		bucket,
+		object,
+		fileReader,
+		fileSize,
+		minio.PutObjectOptions{ContentType: fileContentType},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"message":    "file uploaded successfully",
+		"bucket":     bucket,
+		"object":     object,
+		"file":       fileName,
+		"uploadInfo": uploadInfo,
+	}, nil
 }

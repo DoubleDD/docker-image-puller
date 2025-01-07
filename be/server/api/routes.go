@@ -27,6 +27,8 @@ func SetupRouter() *gin.Engine {
 
 		dip.GET("/minio/buckets", handlers.MinioBuckets)
 		dip.GET("/minio/files", handlers.MinioFiles)
+		dip.GET("/minio/metadata", handlers.MinioFileMetadata)
+		dip.PUT("/minio/upload", handlers.MinioFileUpload)
 	}
 	return r
 }
