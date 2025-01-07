@@ -22,7 +22,7 @@ export class MinioService {
 
   // 获取文件元数据
   getFileMetadata(bucketName: string, objectName: string): Observable<any> {
-    return this.http.head(
+    return this.http.get(
       `/dip/minio/metadata?bucket=${bucketName}&object=${objectName}`,
     );
   }

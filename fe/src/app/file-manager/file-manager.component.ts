@@ -14,6 +14,7 @@ export class FileManagerComponent {
   currentBucket: string = '';
   currentPrefix: string = '';
   metadata: any = {};
+  splitPrefix: string[] = [];
 
   constructor(private minioService: MinioService) {}
 
@@ -33,10 +34,19 @@ export class FileManagerComponent {
     );
   }
 
+  parentFiles(bucket: string, part: string, index: number) {
+    this.currentPrefix = this.splitPrefix.slice(0, index + 1).join('/') + '/';
+    console.log(this.currentPrefix);
+    this.loadFiles(bucket, this.currentPrefix);
+  }
+
   // 加载文件列表
   loadFiles(bucket: string, prefix: string = ''): void {
     this.currentBucket = bucket;
     this.currentPrefix = prefix;
+    this.splitPrefix = this.currentPrefix
+      .split('/')
+      .filter((part) => part.length > 0);
     this.minioService.listFiles(bucket, prefix).subscribe(
       (response: any) => {
         this.files = response;
@@ -49,14 +59,19 @@ export class FileManagerComponent {
 
   // 获取文件元数据
   getMetadata(bucket: string, objectName: string): void {
-    this.minioService.getFileMetadata(bucket, objectName).subscribe(
-      (response: any) => {
-        this.metadata = response.headers;
-      },
-      (error) => {
-        console.error('Error fetching metadata:', error);
-      },
-    );
+    if (objectName.endsWith('/')) {
+      // 获取下一级文件
+      this.loadFiles(bucket, objectName);
+    } else {
+      this.minioService.getFileMetadata(bucket, objectName).subscribe({
+        next: (response: any) => {
+          this.metadata = response;
+        },
+        error: (err) => {
+          console.error('Error fetching metadata:', err);
+        },
+      });
+    }
   }
 
   // 上传文件
