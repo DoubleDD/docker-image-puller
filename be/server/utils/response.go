@@ -12,7 +12,7 @@ type Response struct {
 	Data    interface{} `json:"data"`    // 数据
 }
 
-// 封装一个工具函数，便于返回统一格式
+// NewResponse 封装一个工具函数，便于返回统一格式
 func NewResponse(c *gin.Context, code int, message string, data interface{}) {
 	c.JSON(code, Response{
 		Code:    code,

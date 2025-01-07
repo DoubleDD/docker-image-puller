@@ -2,68 +2,12 @@ package docker
 
 import (
 	"bufio"
-	"docker-image-handler/config"
-	"docker-image-handler/pkg/k8s"
-	"docker-image-handler/utils"
+	"docker-image-handler/internal/models"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 )
-
-func PushImage(tarFile, image, registry string, push bool) error {
-	cfg := config.Load()
-
-	fmt.Printf("开始处理镜像推送任务...\n")
-	fmt.Printf("镜像文件: %s\n镜像名称: %s\n目标仓库: %s\n", tarFile, image, registry)
-
-	if registry == "" {
-		registry = cfg.DefaultPushRegistry
-		fmt.Printf("使用默认镜像仓库: %s\n", registry)
-	}
-
-	fmt.Printf("步骤1: 加载镜像文件...\n")
-	loadCmd := exec.Command("docker", "load", "-i", tarFile)
-	if err := loadCmd.Run(); err != nil {
-		fmt.Printf("❌ 镜像加载失败: %v\n", err)
-		return err
-	}
-	fmt.Printf("✅ 镜像加载成功\n")
-
-	_, repository, tag, _ := utils.ParseImageAddress(image)
-	newTag := fmt.Sprintf("%s/%s:%s", registry, repository, tag)
-	fmt.Printf("步骤2: 标记镜像\n [%s] -> [%s]...\n", image, newTag)
-
-	tagCmd := exec.Command("docker", "tag", image, newTag)
-	if err := tagCmd.Run(); err != nil {
-		fmt.Printf("❌ 镜像标记失败: %v\n", err)
-		return err
-	}
-	fmt.Printf("✅ 镜像标记成功\n")
-
-	defer func() {
-		fmt.Printf("步骤4: 清理临时文件 [%s]...\n", tarFile)
-		if err := os.Remove(tarFile); err != nil {
-			fmt.Printf("⚠️ 临时文件清理失败: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ 临时文件清理成功\n")
-	}()
-
-	if push {
-		fmt.Printf("步骤3: 推送镜像\n [%s]...\n", newTag)
-		pushCmd := exec.Command("docker", "push", newTag)
-		if err := pushCmd.Run(); err != nil {
-			fmt.Printf("❌ 镜像推送失败: %v\n", err)
-			return err
-		}
-		fmt.Printf("✅ 镜像推送成功\n")
-	}
-
-	fmt.Printf("🎉 镜像处理任务完成!\n")
-
-	return nil
-}
 
 // PullImage 拉镜像
 func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) error {
@@ -95,8 +39,8 @@ func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) err
 	return nil
 }
 
-func GetImages() ([]k8s.NamespaceImages, error) {
-	var data []k8s.NamespaceImages
+func GetImages() ([]models.NamespaceImages, error) {
+	var data []models.NamespaceImages
 	// 读取文件内容
 	filePath := "images.json"
 	fileData, err := os.ReadFile(filePath)
@@ -122,7 +66,7 @@ func AddImage(ns, name, oldImage, newImage string) error {
 	if hasNs(ns, data) {
 		for i := 0; i < len(data); i++ {
 			if ns == data[i].Namespace { // 直接通过索引访问切片元素
-				ni := k8s.Deployment{
+				ni := models.Deployment{
 					Name:      name,
 					ImageName: oldImage,
 					NewImage:  newImage,
@@ -133,9 +77,9 @@ func AddImage(ns, name, oldImage, newImage string) error {
 			}
 		}
 	} else {
-		image := k8s.NamespaceImages{
+		image := models.NamespaceImages{
 			Namespace: ns,
-			Deployments: []k8s.Deployment{
+			Deployments: []models.Deployment{
 				{
 					Name:      name,
 					ImageName: oldImage,
@@ -159,7 +103,7 @@ func AddImage(ns, name, oldImage, newImage string) error {
 	return nil
 }
 
-func hasNs(ns string, images []k8s.NamespaceImages) bool {
+func hasNs(ns string, images []models.NamespaceImages) bool {
 	for i := 0; i < len(images); i++ {
 		item := images[i]
 		if ns == item.Namespace {

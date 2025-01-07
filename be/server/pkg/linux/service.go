@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-// 安装服务
+// InstallService 安装服务
 func InstallService() error {
 	log.Println("Starting service installation...")
 
