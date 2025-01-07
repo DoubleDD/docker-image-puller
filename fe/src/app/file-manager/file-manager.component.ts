@@ -39,7 +39,7 @@ export class FileManagerComponent {
     this.currentPrefix = prefix;
     this.minioService.listFiles(bucket, prefix).subscribe(
       (response: any) => {
-        this.files = response.contents.map((item: any) => item.key);
+        this.files = response;
       },
       (error) => {
         console.error('Error loading files:', error);
