@@ -1,47 +1,66 @@
-<div class="p-4">
-  <h1 class="text-2xl font-bold mb-4">MinIO File Manager</h1>
-
-  <!-- Bucket 列表 -->
-  <div class="mb-4">
-    <h2 class="text-xl font-semibold mb-2">Buckets</h2>
-    <ul class="space-y-2 bg-gray-900">
-      <li *ngFor="let bucket of buckets" [ngClass]="{ 'border-2 border-gray-500': bucket === currentBucket }"
-        class="cursor-pointer hover:bg-gray-800 p-2 rounded" (click)="loadFiles(bucket)">
+<div class="flex h-screen bg-gray-800 text-white">
+  <!-- 左侧 Bucket 列表 -->
+  <div class="w-1/4 bg-gray-900 p-4 border-r border-gray-700">
+    <h1 class="text-2xl font-bold mb-6">MinIO File Manager</h1>
+    <h2 class="text-xl font-semibold mb-4">Buckets</h2>
+    <ul class="space-y-2">
+      <li *ngFor="let bucket of buckets"
+          [ngClass]="{ 'bg-gray-700': bucket === currentBucket }"
+          class="cursor-pointer hover:bg-gray-700 p-2 rounded transition-colors duration-200"
+          (click)="loadFiles(bucket)">
         {{ bucket }}
       </li>
     </ul>
   </div>
 
-  <!-- 文件列表 -->
-  <div class="mb-4">
-    <h2 class="text-xl font-semibold mb-2">
-      Files in
-      <a (click)="loadFiles(currentBucket, '')" class="cursor-pointer underline">
-        {{ currentBucket }}</a>
-      @if (currentPrefix) {
-      /
-      @for (part of splitPrefix; track $index) {
-      <a (click)="parentFiles(currentBucket, part, $index)" class="cursor-pointer underline">{{ part }}</a>/
-      }
-      }
-    </h2>
-    <ul class="space-y-2 bg-gray-900">
-      <li *ngFor="let file of files" class="cursor-pointer hover:bg-gray-800 p-2 rounded"
-        (click)="getMetadata(currentBucket, file)">
-        {{ file }}
-      </li>
-    </ul>
+  <!-- 右侧文件列表和元数据 -->
+  <div class="flex-1 p-4 overflow-y-auto">
+    <!-- 文件路径导航 -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-4">
+        Files in
+        <a (click)="loadFiles(currentBucket, '')" class="cursor-pointer hover:underline">
+          {{ currentBucket }}
+        </a>
+        @if (currentPrefix) {
+        /
+        @for (part of splitPrefix; track $index) {
+        <a (click)="parentFiles(currentBucket, part, $index)" class="cursor-pointer hover:underline">{{ part }}</a>/
+        }
+        }
+      </h2>
+    </div>
+
+    <!-- 文件列表 -->
+    <div class="mb-6">
+      <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <li *ngFor="let file of files"
+            class="cursor-pointer hover:bg-gray-700 p-4 rounded-lg transition-colors duration-200"
+            (click)="getMetadata(currentBucket, file)">
+          <div class="flex items-center">
+            <span class="text-lg">{{ file.substring(currentPrefix.length) }}</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 文件元数据 -->
+    <div *ngIf="metadata" class="mb-6">
+      <h2 class="text-xl font-semibold mb-4">Metadata</h2>
+      <div class="bg-gray-900 p-4 rounded-lg">
+        <pre class="whitespace-pre-wrap">{{ metadata | json }}</pre>
+      </div>
+    </div>
   </div>
 
-  <!-- 文件元数据 -->
-  <div *ngIf="metadata" class="mb-4">
-    <h2 class="text-xl font-semibold mb-2">Metadata</h2>
-    <pre class="bg-gray-900 p-4 rounded">{{ metadata | json }}</pre>
-  </div>
-
-  <!-- 文件上传 -->
-  <div class="mb-4">
-    <h2 class="text-xl font-semibold mb-2">Upload</h2>
-    <input type="file" (change)="onFileSelected($event)" class="border p-2 rounded" multiple webkitdirectory />
+  <!-- 悬浮的圆形 Upload 按钮 -->
+  <div class="fixed bottom-8 right-8">
+    <label for="file-upload" class="cursor-pointer">
+      <div class="bg-blue-600 hover:bg-blue-700 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200">
+        <!--<i class="fas fa-plus text-white text-2xl"></i>-->
+        <i class="fas fa-cloud-upload-alt text-white text-2xl"></i>
+      </div>
+    </label>
+    <input #fileInput id="file-upload" type="file" (change)="onFileSelected($event)" (click)="check($event)" class="hidden" multiple webkitdirectory />
   </div>
 </div>

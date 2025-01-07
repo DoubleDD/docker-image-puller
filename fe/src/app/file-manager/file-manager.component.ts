@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { MinioService } from '../services/minio.service';
 import { CommonModule, JsonPipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-file-manager',
@@ -9,6 +10,8 @@ import { CommonModule, JsonPipe } from '@angular/common';
   styleUrl: './file-manager.component.scss',
 })
 export class FileManagerComponent {
+  @ViewChild('fileInput') fileInput: any;
+
   buckets: string[] = [];
   files: string[] = [];
   currentBucket: string = '';
@@ -74,21 +77,55 @@ export class FileManagerComponent {
     }
   }
 
+  check(event: any) {
+    if (!this.currentBucket) {
+      alert('请先选择Bucket');
+      event.preventDefault();
+      return;
+    }
+  }
   // 上传文件
   onFileSelected(event: any): void {
-    const file: File = event.target.files[0];
-    if (file) {
-      const objectName = `${this.currentPrefix}${file.name}`;
-      this.minioService
-        .uploadFile(this.currentBucket, objectName, file)
-        .subscribe(
-          () => {
-            this.loadFiles(this.currentBucket, this.currentPrefix);
-          },
-          (error) => {
-            console.error('Error uploading file:', error);
-          },
+    const files: File[] = event.target.files;
+    if (files.length > 0) {
+      // 创建一个数组来存储所有上传的 Observable
+      const uploadObservables = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        const objectName = `${this.currentPrefix}${file.webkitRelativePath || file.name}`;
+
+        // 将每个文件的上传操作转换为 Observable 并存入数组
+        const uploadObservable = this.minioService.uploadFile(
+          this.currentBucket,
+          objectName,
+          file,
         );
+        uploadObservables.push(uploadObservable);
+      }
+
+      // 使用 forkJoin 等待所有上传操作完成
+      forkJoin(uploadObservables).subscribe({
+        next: () => {
+          // 所有文件上传完成后，刷新文件列表
+          this.loadFiles(this.currentBucket, this.currentPrefix);
+          // 清除 input 的值
+          this.clearFileInput();
+        },
+        error: (error) => {
+          console.error('Error uploading files:', error);
+          // 即使有错误，也清除 input 的值
+          this.clearFileInput();
+        },
+      });
+    }
+  }
+
+  // 清空 input 的值
+  clearFileInput(): void {
+    if (this.fileInput) {
+      this.fileInput.nativeElement.value = ''; // 清空 input 的值
     }
   }
 }
