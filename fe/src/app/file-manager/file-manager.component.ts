@@ -13,7 +13,7 @@ export class FileManagerComponent {
   @ViewChild('fileInput') fileInput: any;
 
   buckets: string[] = [];
-  files: string[] = [];
+  files: any[] = [];
   currentBucket: string = '';
   currentPrefix: string = '';
   metadata: any = {};
@@ -53,6 +53,7 @@ export class FileManagerComponent {
     this.minioService.listFiles(bucket, prefix).subscribe(
       (response: any) => {
         this.files = response;
+        this.metadata = {};
       },
       (error) => {
         console.error('Error loading files:', error);
@@ -61,7 +62,10 @@ export class FileManagerComponent {
   }
 
   // 获取文件元数据
-  getMetadata(bucket: string, objectName: string): void {
+  getMetadata(bucket: string, object: any): void {
+    console.log(object);
+    const objectName = object.name;
+
     if (objectName.endsWith('/')) {
       // 获取下一级文件
       this.loadFiles(bucket, objectName);

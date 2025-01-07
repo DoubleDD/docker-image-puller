@@ -1,6 +1,6 @@
 <div class="flex h-screen bg-gray-800 text-white">
   <!-- 左侧 Bucket 列表 -->
-  <div class="w-1/4 bg-gray-900 p-4 border-r border-gray-700">
+  <div class="w-1/6 bg-gray-900 p-4 border-r border-gray-700">
     <h1 class="text-2xl font-bold mb-6">MinIO File Manager</h1>
     <h2 class="text-xl font-semibold mb-4">Buckets</h2>
     <ul class="space-y-2">
@@ -38,7 +38,7 @@
             class="cursor-pointer hover:bg-gray-700 p-4 rounded-lg transition-colors duration-200"
             (click)="getMetadata(currentBucket, file)">
           <div class="flex items-center">
-            <span class="text-lg">{{ file.substring(currentPrefix.length) }}</span>
+            <span class="text-lg">{{ file.name.substring(currentPrefix.length) }}</span>
           </div>
         </li>
       </ul>
