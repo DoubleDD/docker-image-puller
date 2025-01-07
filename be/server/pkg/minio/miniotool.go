@@ -1,142 +1,76 @@
 package minio
 
 import (
-	"bytes"
-	"encoding/xml"
+	"context"
+	"docker-image-handler/config"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
-	"time"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"log"
+	"sync"
 )
 
-func (c *S3Client) ListBuckets() ([]Bucket, error) {
-	// MinIO API要求使用斜杠结尾
-	endpoint := strings.TrimSuffix(c.Endpoint, "/") + "/"
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request failed: %w", err)
-	}
-
-	date := time.Now().UTC().Format("20060102T150405Z")
-	req.Header.Set("x-amz-date", date)
-	req.Header.Set("x-amz-content-sha256", emptyPayloadHash)
-	req.Header.Set("Host", req.URL.Host)
-
-	c.signRequest(req, date)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("list buckets failed: status=%d body=%s", resp.StatusCode, string(body))
-	}
-
-	var result ListBucketsResult
-	if err := xml.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode response failed: %w", err)
-	}
-	return result.Buckets.Bucket, nil
+type Tool struct {
+	client *minio.Client
+	ctx    context.Context
 }
 
-func (c *S3Client) ListObjects(prefix, delimiter string) (*ListObjectsResult, error) {
-	url := fmt.Sprintf("%s/%s", strings.TrimSuffix(c.Endpoint, "/"), c.Bucket)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
+var (
+	minioClientInstance *Tool
+	minioClientOnce     sync.Once
+)
 
-	q := req.URL.Query()
-	if prefix != "" {
-		q.Set("prefix", prefix)
-	}
-	if delimiter != "" {
-		q.Set("delimiter", delimiter)
-	}
-	req.URL.RawQuery = q.Encode()
+func MinioClient() *Tool {
+	minioClientOnce.Do(func() {
+		load := config.Load()
+		endpoint := load.Minio.Endpoint
+		accessKeyID := load.Minio.Username
+		secretAccessKey := load.Minio.Password
 
-	date := time.Now().UTC().Format("20060102T150405Z")
-	req.Header.Set("x-amz-date", date)
-	req.Header.Set("x-amz-content-sha256", emptyPayloadHash)
-	req.Header.Set("Host", req.URL.Host)
+		// Initialize minio client object.
+		client, err := minio.New(endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+			Secure: false,
+		})
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-	c.signRequest(req, date)
+		minioClientInstance = &Tool{
+			client: client,
+			ctx:    context.Background(),
+		}
+		log.Printf("%#v\n", minioClientInstance) // minioClient is now set up
+	})
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("list objects failed: status=%d body=%s", resp.StatusCode, string(body))
-	}
-
-	var result ListObjectsResult
-	if err := xml.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	return minioClientInstance
 }
 
-func (c *S3Client) PutObject(key string, data []byte) error {
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/%s/%s", c.Endpoint, c.Bucket, key), bytes.NewReader(data))
+func (c *Tool) ListBuckets() ([]minio.BucketInfo, error) {
+	buckets, err := c.client.ListBuckets(c.ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	date := time.Now().UTC().Format("20060102T150405Z")
-	req.Header.Set("x-amz-date", date)
-	req.Header.Set("x-amz-content-sha256", hashBytes(data))
-
-	c.signRequest(req, date)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("put object failed: %s", resp.Status)
-	}
-
-	return nil
+	return buckets, nil
 }
 
-func (c *S3Client) GetObject(key string) ([]byte, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s", c.Endpoint, c.Bucket, key), nil)
-	if err != nil {
-		return nil, err
+func (c *Tool) ListObjects(bucket, prefix string) ([]string, error) {
+	objectCh := c.client.ListObjects(c.ctx, bucket, minio.ListObjectsOptions{
+		WithVersions: false,
+		WithMetadata: false,
+		Prefix:       prefix,
+		Recursive:    false,
+		MaxKeys:      0,
+		StartAfter:   "",
+		UseV1:        false,
+	})
+	var result []string
+	for object := range objectCh {
+		if object.Err != nil {
+			fmt.Println(object.Err)
+			return nil, object.Err
+		}
+		result = append(result, object.Key)
 	}
-
-	date := time.Now().UTC().Format("20060102T150405Z")
-	req.Header.Set("x-amz-date", date)
-	req.Header.Set("x-amz-content-sha256", emptyPayloadHash)
-
-	c.signRequest(req, date)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("get object failed: %s", resp.Status)
-	}
-
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return result, nil
 }

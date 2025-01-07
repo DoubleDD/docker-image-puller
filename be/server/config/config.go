@@ -23,7 +23,7 @@ func Load() *Config {
 		DefaultPushRegistry: "172.27.35.4:5000",
 		DefaultPullRegistry: "registry.hub.docker.com",
 		Minio: MinioConfig{
-			Endpoint: "http://127.0.0.1:9000",
+			Endpoint: "127.0.0.1:9000",
 			Username: "admin",
 			Password: "minio@Yunli123",
 		},
