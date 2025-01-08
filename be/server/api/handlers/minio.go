@@ -33,9 +33,8 @@ func MinioFiles(c *gin.Context) {
 	result, err := client.ListObjects(bucket, prefix)
 	if err != nil {
 		fmt.Println("Error listing files:", err)
-	} else {
-		fmt.Println("files:", result)
 	}
+	c.Header("Content-Type", "application/json; charset=utf-8")
 	c.JSON(http.StatusOK, result)
 }
 

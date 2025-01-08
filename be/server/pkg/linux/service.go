@@ -226,6 +226,7 @@ func copyFile(src, dst string) error {
 
 func UpdateService() error {
 	log.Println("Starting service update...")
+	// TODO: 下载文件
 
 	// 停止服务
 	log.Println("Stopping service...")

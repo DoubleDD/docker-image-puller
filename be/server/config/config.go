@@ -27,5 +27,10 @@ func Load() *Config {
 			Username: "admin",
 			Password: "minio@Yunli123",
 		},
+		// Minio: MinioConfig{
+		// 	Endpoint: "10.62.210.66:9900",
+		// 	Username: "admin",
+		// 	Password: "minio@yunli123",
+		// },
 	}
 }

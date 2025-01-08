@@ -11,7 +11,9 @@ import (
 
 // PullImage 拉镜像
 func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) error {
-	msgFn(fmt.Sprintf("1. docker pull %s", oldImage))
+	// Step 1
+	msgFn("======== Step 1: Pull Image ========")
+	msgFn(fmt.Sprintf("🚀 docker pull %s", oldImage))
 	if err := execCmd(msgFn, "docker", "pull", oldImage); err != nil {
 		msgFn(fmt.Sprintf("❌ 拉镜像失败: %v", err))
 		doneFn()
@@ -19,7 +21,10 @@ func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) err
 	}
 	msgFn("✅ 拉镜像成功")
 
-	msgFn(fmt.Sprintf("\n2. docker tag %s %s", oldImage, newImage))
+	// Step 2
+	msgFn(" ")
+	msgFn("======== Step 2: Tag Image ========")
+	msgFn(fmt.Sprintf("🏷️  docker tag %s %s", oldImage, newImage))
 	err := execCmd(msgFn, "docker", "tag", oldImage, newImage)
 	if err != nil {
 		msgFn(fmt.Sprintf("❌ 镜像打Tag失败: %v", err))
@@ -28,13 +33,17 @@ func PullImage(oldImage, newImage string, msgFn func(string), doneFn func()) err
 	}
 	msgFn("✅ 镜像打Tag成功")
 
-	msgFn(fmt.Sprintf("\n3. docker push %s", newImage))
+	// Step 3
+	msgFn("======== Step 3: Push Image ========")
+	msgFn(fmt.Sprintf("📤 docker push %s", newImage))
 	if err := execCmd(msgFn, "docker", "push", newImage); err != nil {
 		msgFn(fmt.Sprintf("❌ 上传镜像失败: %v", err))
 		doneFn()
 		return err
 	}
-	msgFn("✅ 上传镜像成功\n\n🎉 🎉 🎉 OH YEAH ALL DONE!")
+	msgFn("✅ 上传镜像成功")
+
+	msgFn("🎉 🎉 🎉 所有步骤完成!")
 	doneFn()
 	return nil
 }

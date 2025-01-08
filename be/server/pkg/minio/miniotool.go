@@ -56,7 +56,7 @@ func (c *Tool) ListBuckets() ([]minio.BucketInfo, error) {
 	return buckets, nil
 }
 
-func (c *Tool) ListObjects(bucket, prefix string) ([]string, error) {
+func (c *Tool) ListObjects(bucket, prefix string) ([]minio.ObjectInfo, error) {
 	objectCh := c.client.ListObjects(c.ctx, bucket, minio.ListObjectsOptions{
 		WithVersions: false,
 		WithMetadata: false,
@@ -66,13 +66,13 @@ func (c *Tool) ListObjects(bucket, prefix string) ([]string, error) {
 		StartAfter:   "",
 		UseV1:        false,
 	})
-	var result []string
+	var result []minio.ObjectInfo
 	for object := range objectCh {
 		if object.Err != nil {
 			fmt.Println(object.Err)
 			return nil, object.Err
 		}
-		result = append(result, object.Key)
+		result = append(result, object)
 	}
 	return result, nil
 }
