@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { MinioService } from '../services/minio.service';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
@@ -12,6 +12,11 @@ import { FileSizePipe } from '../shared/pipes/file-size.pipe';
 })
 export class FileManagerComponent {
   @ViewChild('fileInput') fileInput: any;
+  @ViewChild('dropArea') dropArea!: ElementRef;
+
+  uploading = false;
+  uploadSuccess = false;
+  uploadError: string | null = null;
 
   buckets: string[] = [];
   files: any[] = [];
@@ -113,7 +118,16 @@ export class FileManagerComponent {
   }
   // 上传文件
   onFileSelected(event: any): void {
-    const files: File[] = event.target.files;
+    this.fileInfos = event.target.files.map((file: File) => {
+      return {
+        path: file.webkitRelativePath || file.name,
+        file: file,
+      };
+    });
+    this.uploadFiles(this.fileInfos);
+  }
+
+  uploadFiles(files: { path: string; file: File }[]): void {
     if (files.length > 0) {
       // 创建一个数组来存储所有上传的 Observable
       const uploadObservables = [];
@@ -121,13 +135,13 @@ export class FileManagerComponent {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        const objectName = `${this.currentPrefix}${file.webkitRelativePath || file.name}`;
+        const objectName = `${this.currentPrefix}${file.path}`;
 
         // 将每个文件的上传操作转换为 Observable 并存入数组
         const uploadObservable = this.minioService.uploadFile(
           this.currentBucket,
           objectName,
-          file,
+          file.file,
         );
         uploadObservables.push(uploadObservable);
       }
@@ -153,6 +167,89 @@ export class FileManagerComponent {
   clearFileInput(): void {
     if (this.fileInput) {
       this.fileInput.nativeElement.value = ''; // 清空 input 的值
+    }
+  }
+
+  // 拖放
+  onDragOver(event: DragEvent) {
+    event.preventDefault(); // 阻止默认行为
+    this.dropArea.nativeElement.classList.add('active');
+  }
+
+  onDragEnter(event: DragEvent) {
+    event.preventDefault();
+    this.dropArea.nativeElement.classList.add('active');
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    this.dropArea.nativeElement.classList.remove('active');
+  }
+
+  async onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.dropArea.nativeElement.classList.remove('active');
+
+    this.uploadSuccess = false;
+    this.uploadError = null;
+    this.uploading = false;
+    this.fileInfos = [];
+
+    const items = event.dataTransfer?.items || [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          await this.handleEntry(entry, '');
+        }
+      }
+    }
+
+    this.uploadFiles(this.fileInfos);
+  }
+
+  fileInfos: { path: string; file: File }[] = [];
+
+  async handleEntry(entry: FileSystemEntry, path: string): Promise<void> {
+    if (entry.isFile) {
+      try {
+        const file = await new Promise<File>((resolve, reject) => {
+          (entry as FileSystemFileEntry).file(resolve, reject);
+        });
+        this.fileInfos.push({ path: path + entry.name, file: file });
+        console.log('文件信息:', { path: path + entry.name, file: file });
+      } catch (error) {
+        console.error('读取文件出错:', error);
+      }
+    } else if (entry.isDirectory) {
+      console.log('文件夹名:', entry.name);
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      await this.readEntries(reader, path + entry.name + '/'); // 路径添加文件夹名
+    }
+  }
+
+  async readEntries(
+    reader: FileSystemDirectoryReader,
+    path: string,
+  ): Promise<void> {
+    try {
+      const entries = await new Promise<FileSystemEntry[]>(
+        (resolve, reject) => {
+          reader.readEntries(resolve, reject);
+        },
+      );
+
+      if (entries.length) {
+        for (let i = 0; i < entries.length; i++) {
+          await this.handleEntry(entries[i], path); // 递归调用，并传递当前路径
+        }
+        // 继续读取，直到 entries 为空
+        await this.readEntries(reader, path);
+      }
+    } catch (error) {
+      console.error('读取文件夹内容出错:', error);
     }
   }
 }

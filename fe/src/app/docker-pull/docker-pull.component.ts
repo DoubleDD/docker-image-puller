@@ -102,6 +102,9 @@ export class DockerPullComponent implements OnInit {
   }
 
   private addLog(log: string) {
+    if (log.includes('====')) {
+      log = '\n' + log;
+    }
     this.logs.push(log);
   }
 
