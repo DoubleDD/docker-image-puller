@@ -32,7 +32,7 @@
     <!-- 文件列表（表格布局） -->
     <div class="mb-6">
       <!-- 表头 -->
-      <div class="grid grid-cols-3 gap-4 p-2 bg-gray-700 rounded-t-lg">
+      <div class="grid grid-cols-[3fr_1fr_1fr] gap-4 p-2 bg-gray-700 rounded-t-lg">
         <div class="font-semibold">文件名</div>
         <div class="font-semibold">最后更新时间</div>
         <div class="font-semibold">文件大小</div>
@@ -43,7 +43,7 @@
         <li *ngFor="let file of files"
           class="cursor-pointer hover:bg-gray-700 p-2 rounded-lg transition-colors duration-200"
           (click)="getMetadata(currentBucket, file)">
-          <div class="grid grid-cols-3 gap-4 items-center">
+          <div class="grid grid-cols-[3fr_1fr_1fr] gap-4 items-center">
             <!-- 文件名 -->
             <div class="flex items-center">
               <i *ngIf="file.name.endsWith('/')" class="fas fa-folder text-yellow-400 text-lg mr-2"></i>
