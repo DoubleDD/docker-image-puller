@@ -25,7 +25,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	fmt.Println("======================================================================")
 
 	// 打印请求行和请求头
-	fmt.Printf("%s %s %s\n", req.Method, req.URL.RequestURI(), req.Proto)
+	fmt.Printf("%s %s %s\n", req.Method, req.URL.Scheme+"://"+req.URL.Host+req.URL.Path+"?"+req.URL.RawQuery, req.Proto)
 	for name, values := range req.Header {
 		for _, value := range values {
 			fmt.Printf("%s: %s\n", name, value)

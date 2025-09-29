@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"docker-image-handler/config"
 	"docker-image-handler/pkg/registry"
 	"docker-image-handler/pkg/utils"
 	"fmt"
@@ -23,12 +24,17 @@ func GetManifest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	platform := c.Query("platform")
 	username := c.Query("username")
 	password := c.Query("password")
+	if username == "" {
+		cfg:=config.Load()
+		username = cfg.DefaultUsername
+		password = cfg.DefaultPassword
+	}
 
 	client := registry.NewDockerRegistryClient(reg, registry.WithAuth(username, password))
-	manifest, err := client.GetManifest(repo, tag)
+	manifest, err := client.GetManifest(repo, tag,platform)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -59,7 +65,11 @@ func ImageLayerBlobDownload(c *gin.Context) {
 
 	username := c.Query("username")
 	password := c.Query("password")
-
+	if username == "" {
+		cfg:=config.Load()
+		username = cfg.DefaultUsername
+		password = cfg.DefaultPassword
+	}
 	// 创建下载任务
 	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
 

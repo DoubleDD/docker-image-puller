@@ -46,3 +46,4 @@ be/build
 be/vendor
 fe/.angular
 fe/dist
+.env

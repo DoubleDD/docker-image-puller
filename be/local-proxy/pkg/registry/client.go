@@ -146,6 +146,7 @@ func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string
 
 	return nil
 }
+
 func downloadFromCache(fileName, digest string, size int64, c *gin.Context) error {
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -320,8 +321,8 @@ func (client *DockerRegistryClient) getJWT(repo, tag string) (string, error) {
 }
 
 // GetManifest 获取镜像的 manifest
-func (client *DockerRegistryClient) GetManifest(repo, tag string) (map[string]interface{}, error) {
-	return client.fetchManifest(repo, tag)
+func (client *DockerRegistryClient) GetManifest(repo, tag,platform string) (map[string]interface{}, error) {
+	return client.fetchManifest(repo, tag,platform)
 }
 
 // 获取 authentication URL
@@ -388,17 +389,61 @@ func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*h
 }
 
 // 使用 token 获取 manifest
-func (client *DockerRegistryClient) fetchManifest(repo, tag string) (map[string]interface{}, error) {
+func (client *DockerRegistryClient) fetchManifest(repo, tag, platform string) (map[string]interface{}, error) {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return nil, err
 	}
 
+	manifest, err := imageManifest(httpClient,tag)
+	if err != nil {
+		return nil, err
+	}
+	
+	if platform == ""{
+		platform = "amd64"
+	}
+	os := "linux"
+
+	// Check if the manifest has layers property, if yes, return directly
+	if _, hasLayers := manifest["layers"]; hasLayers {
+		return manifest, nil
+	}
+
+	// If no layers property, check if it has manifests property
+	if manifestsData, hasManifests := manifest["manifests"]; hasManifests {
+		if manifestsArray, ok := manifestsData.([]interface{}); ok {
+			// Iterate through manifests to find the one matching os and architecture
+			for _, item := range manifestsArray {
+				if manifestInfo, ok := item.(map[string]interface{}); ok {
+					if platformInfo, hasPlatform := manifestInfo["platform"]; hasPlatform {
+						if platformMap, ok := platformInfo.(map[string]interface{}); ok {
+							if plat, hasArch := platformMap["architecture"]; hasArch && plat == platform {
+								if osInfo, hasOS := platformMap["os"]; hasOS && osInfo == os {
+									// Found the matching manifest, get its digest and fetch it
+									if digest, hasDigest := manifestInfo["digest"]; hasDigest {
+										if digestStr, ok := digest.(string); ok {
+											return imageManifest(httpClient, digestStr)
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return manifest, nil
+}
+
+func imageManifest(httpClient *httpClient,tag string)(map[string]interface{}, error){
 	req, err := httpClient.newRequest("GET", fmt.Sprintf("/manifests/%s", tag), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json")
 
 	resp, err := httpClient.client.Do(req)
 	if err != nil {
@@ -415,13 +460,12 @@ func (client *DockerRegistryClient) fetchManifest(repo, tag string) (map[string]
 		return nil, err
 	}
 
-	return manifest, nil
+	return manifest, nil	
 }
 
 // ListImages ListImagesInDirectory queries all images under a specified directory in a repository.
 // It returns the list of image names in the given directory.
 func (client *DockerRegistryClient) ListImages(registry, namespace string) ([]string, error) {
-
 	// Create a new authenticated client for the repository
 	httpClient := &httpClient{
 		client:  http.DefaultClient,
@@ -470,7 +514,6 @@ func (client *DockerRegistryClient) ListImages(registry, namespace string) ([]st
 
 // ... 其他Registry相关方法
 func parseAuthUrl(resp *http.Response) (string, error) {
-
 	authHeader := resp.Header.Get("WWW-Authenticate")
 	if authHeader == "" {
 		return "", errors.New("WWW-Authenticate header not found")
