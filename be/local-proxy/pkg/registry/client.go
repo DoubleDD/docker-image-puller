@@ -118,33 +118,35 @@ func parseJWTExpireTime(token string) (time.Time, error) {
 }
 
 // DownloadBlobWithSSE SSE协议下载文件，持续输出
-func (client *DockerRegistryClient) DownloadBlobWithSSE(repo, tag, digest string, size int64, c *gin.Context) error {
+func (client *DockerRegistryClient) DownloadBlobWithSSE(ns, repo, tag, digest, suffix string, size int64, c *gin.Context) (string, error) {
 	// 检查本地是否有缓存，有缓存直接返回缓存
-	tmpDir := filepath.Join(utils.UserHomeTmpDir(), strings.Replace(digest, ":", "_", -1))
-	fileName := filepath.Join(tmpDir, "all")
+	tmpDir := filepath.Join(utils.UserHomeTmpDir(), repo+"_"+tag)
+	fileName := filepath.Join(tmpDir, strings.Replace(digest, ":", "_", -1)+suffix)
 	if utils.CheckFileHash(fileName, digest[7:], sha256.New) {
 		// 从本地获取
 		fmt.Println("从本地获取", digest)
 		err := downloadFromCache(fileName, digest, size, c)
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else {
 		// 从网络下载
 		fmt.Println("从网络下载", digest)
-		err2 := downloadFromNetwork(repo, tag, digest, size, c, client, fileName)
-		if err2 != nil {
-			return err2
+		err := downloadFromNetwork(ns, repo, tag, digest, size, c, client, fileName)
+		if err != nil {
+			return "", err
 		}
 	}
-	// 发送完成事件
-	c.SSEvent("complete", gin.H{
-		"digest": digest,
-		"size":   size,
-	})
-	c.Writer.Flush()
+	if c != nil {
+		// 发送完成事件
+		c.SSEvent("complete", gin.H{
+			"digest": digest,
+			"size":   size,
+		})
+		c.Writer.Flush()
+	}
 
-	return nil
+	return fileName, nil
 }
 
 func downloadFromCache(fileName, digest string, size int64, c *gin.Context) error {
@@ -181,9 +183,9 @@ func downloadFromCache(fileName, digest string, size int64, c *gin.Context) erro
 
 			// 发送数据块
 			c.SSEvent("data", gin.H{
-				"no":   chunkNumber,
-				"md5":  md5Hash,
-				"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
+				"no":  chunkNumber,
+				"md5": md5Hash,
+				// "data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
 			})
 			c.Writer.Flush()
 			totalRead = 0 // 重置缓冲区
@@ -200,8 +202,8 @@ func downloadFromCache(fileName, digest string, size int64, c *gin.Context) erro
 	return nil
 }
 
-func downloadFromNetwork(repo string, tag string, digest string, size int64, c *gin.Context, client *DockerRegistryClient, fileName string) error {
-	httpClient, err := client.newAuthenticatedClient(repo, tag)
+func downloadFromNetwork(ns, repo string, tag string, digest string, size int64, c *gin.Context, client *DockerRegistryClient, fileName string) error {
+	httpClient, err := client.newAuthenticatedClient(ns+"/"+repo, tag)
 	if err != nil {
 		return err
 	}
@@ -232,9 +234,9 @@ func downloadFromNetwork(repo string, tag string, digest string, size int64, c *
 	var downloaded, chunkNumber, totalRead int64
 
 	// 本地文件
-	err = os.Remove(fileName)
+	err = utils.RecreateFile(fileName)
 	if err != nil {
-		fmt.Println("删除文件失败，准备覆盖文件内容")
+		fmt.Println("删除文件失败，准备覆盖文件内容: " + fileName)
 		utils.CreateFileWithData(fileName, nil)
 	}
 
@@ -245,34 +247,49 @@ func downloadFromNetwork(repo string, tag string, digest string, size int64, c *
 			downloaded += int64(n)
 			// 计算进度
 			percentage := float64(downloaded) / float64(size) * 100
-			// 发送进度事件
-			c.SSEvent("progress", gin.H{
-				"size":       n,
-				"digest":     digest,
-				"downloaded": downloaded,
-				"total":      size,
-				"percentage": percentage,
-			})
-			c.Writer.Flush()
+			if c != nil {
+				// 发送进度事件
+				c.SSEvent("progress", gin.H{
+					"size":       n,
+					"digest":     digest,
+					"downloaded": downloaded,
+					"total":      size,
+					"percentage": percentage,
+				})
+				c.Writer.Flush()
+			}
 		}
 		// 如果达到 5MB 或文件已读取完，则发送数据块
 		if totalRead >= int64(maxBufferSize) || (err == io.EOF && totalRead > 0) {
-			md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
-
-			// 发送数据块
-			c.SSEvent("data", gin.H{
-				"no":   chunkNumber,
-				"md5":  md5Hash,
-				"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
-			})
-			c.Writer.Flush()
-			totalRead = 0 // 重置缓冲区
+			if c != nil {
+				md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
+				// 发送数据块
+				c.SSEvent("data", gin.H{
+					"no":  chunkNumber,
+					"md5": md5Hash,
+					"data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
+				})
+				c.Writer.Flush()
+			}
 			chunkNumber++
 			// 写数据到本地
+			fmt.Printf("\n保存数据到本地：size=%d, filename=%s ", size, fileName)
 			utils.AppendDataToFile(buffer[:totalRead], fileName)
+			totalRead = 0 // 重置缓冲区
 		}
 
 		if err == io.EOF {
+			if c != nil {
+				md5Hash, _ := utils.DataHash(buffer[:totalRead], md5.New)
+				// 发送数据块
+				c.SSEvent("data", gin.H{
+					"no":  chunkNumber,
+					"md5": md5Hash,
+					"msg": "layer已保存到本地" + fileName,
+					// "data": base64.StdEncoding.EncodeToString(buffer[:totalRead]),
+				})
+				c.Writer.Flush()
+			}
 			break
 		}
 		if err != nil {
@@ -321,8 +338,8 @@ func (client *DockerRegistryClient) getJWT(repo, tag string) (string, error) {
 }
 
 // GetManifest 获取镜像的 manifest
-func (client *DockerRegistryClient) GetManifest(repo, tag,platform string) (map[string]interface{}, error) {
-	return client.fetchManifest(repo, tag,platform)
+func (client *DockerRegistryClient) GetManifest(repo, tag, platform string) (*Manifest, error) {
+	return client.fetchManifest(repo, tag, platform)
 }
 
 // 获取 authentication URL
@@ -389,56 +406,43 @@ func (client *DockerRegistryClient) newAuthenticatedClient(repo, tag string) (*h
 }
 
 // 使用 token 获取 manifest
-func (client *DockerRegistryClient) fetchManifest(repo, tag, platform string) (map[string]interface{}, error) {
+func (client *DockerRegistryClient) fetchManifest(repo, tag, platform string) (*Manifest, error) {
 	httpClient, err := client.newAuthenticatedClient(repo, tag)
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := imageManifest(httpClient,tag)
+	manifest, err := imageManifest(httpClient, tag)
 	if err != nil {
 		return nil, err
 	}
-	
-	if platform == ""{
+
+	if platform == "" {
 		platform = "amd64"
 	}
 	os := "linux"
 
 	// Check if the manifest has layers property, if yes, return directly
-	if _, hasLayers := manifest["layers"]; hasLayers {
+	if manifest.Layers != nil {
 		return manifest, nil
 	}
 
-	// If no layers property, check if it has manifests property
-	if manifestsData, hasManifests := manifest["manifests"]; hasManifests {
-		if manifestsArray, ok := manifestsData.([]interface{}); ok {
-			// Iterate through manifests to find the one matching os and architecture
-			for _, item := range manifestsArray {
-				if manifestInfo, ok := item.(map[string]interface{}); ok {
-					if platformInfo, hasPlatform := manifestInfo["platform"]; hasPlatform {
-						if platformMap, ok := platformInfo.(map[string]interface{}); ok {
-							if plat, hasArch := platformMap["architecture"]; hasArch && plat == platform {
-								if osInfo, hasOS := platformMap["os"]; hasOS && osInfo == os {
-									// Found the matching manifest, get its digest and fetch it
-									if digest, hasDigest := manifestInfo["digest"]; hasDigest {
-										if digestStr, ok := digest.(string); ok {
-											return imageManifest(httpClient, digestStr)
-										}
-									}
-								}
-							}
-						}
-					}
+	if manifest.Manifests != nil {
+		// 多架构的，选中对应的架构
+		for _, mf := range *manifest.Manifests {
+			if platform == mf.Platform.Architecture && os == mf.Platform.Os {
+				newManifest, err := imageManifest(httpClient, mf.Digest)
+				if err == nil {
+					return newManifest, nil
 				}
 			}
 		}
-	}
 
-	return manifest, nil
+	}
+	return nil, errors.ErrUnsupported
 }
 
-func imageManifest(httpClient *httpClient,tag string)(map[string]interface{}, error){
+func imageManifest(httpClient *httpClient, tag string) (*Manifest, error) {
 	req, err := httpClient.newRequest("GET", fmt.Sprintf("/manifests/%s", tag), nil)
 	if err != nil {
 		return nil, err
@@ -455,12 +459,34 @@ func imageManifest(httpClient *httpClient,tag string)(map[string]interface{}, er
 		return nil, errors.New("failed to fetch manifest")
 	}
 
-	var manifest map[string]interface{}
+	// 将resp.body解析为Manifest对象
+	var manifest Manifest
 	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
 		return nil, err
 	}
+	manifestJson, _ := json.MarshalIndent(manifest, "", "  ")
+	fmt.Printf("\n\n 镜像 manifest： %s \n\n", manifestJson)
+	return &manifest, nil
+}
 
-	return manifest, nil	
+// manifestToMap converts a Manifest struct to a map[string]interface{}
+func manifestToMap(manifest *Manifest) (map[string]interface{}, error) {
+	if manifest == nil {
+		return nil, nil
+	}
+
+	// Convert the Manifest struct to JSON and then to map
+	manifestBytes, err := json.Marshal(manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	var manifestMap map[string]interface{}
+	if err := json.Unmarshal(manifestBytes, &manifestMap); err != nil {
+		return nil, err
+	}
+
+	return manifestMap, nil
 }
 
 // ListImages ListImagesInDirectory queries all images under a specified directory in a repository.

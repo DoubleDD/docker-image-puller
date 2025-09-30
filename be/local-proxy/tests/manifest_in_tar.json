@@ -1,0 +1,89 @@
+[
+    {
+        "Config": "blobs/sha256/b29d748098e32a42a2ac743679dd53501184ba9c4a1009248b6f60a370895135.json",
+        "LayerSources": {
+            "sha256:2d970907bb8411aea1011e206c504ef0ae6295d5405e2653f66a13c42b31d907": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 282,
+                "digest": "sha256:2d970907bb8411aea1011e206c504ef0ae6295d5405e2653f66a13c42b31d907",
+                "platform": {}
+            },
+            "sha256:55e48d707276ca428b96a28bf34a3819588fbf601d70ed25af324db8d1437ef4": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 144,
+                "digest": "sha256:55e48d707276ca428b96a28bf34a3819588fbf601d70ed25af324db8d1437ef4",
+                "platform": {}
+            },
+            "sha256:5c984a731132bc80679e3479bdd07f56860e2880f0242b7edb2f8788a8497589": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 634164,
+                "digest": "sha256:5c984a731132bc80679e3479bdd07f56860e2880f0242b7edb2f8788a8497589",
+                "platform": {}
+            },
+            "sha256:74a85ff6c36f30572d34bc44f9783d943c4f08305f7da3cec5b688fe6f5cfc87": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 22595450,
+                "digest": "sha256:74a85ff6c36f30572d34bc44f9783d943c4f08305f7da3cec5b688fe6f5cfc87",
+                "platform": {}
+            },
+            "sha256:960043b8858c3c30f1d79dcc49adb2804fd35c2510729e67685b298b2ca746b7": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 20322,
+                "digest": "sha256:960043b8858c3c30f1d79dcc49adb2804fd35c2510729e67685b298b2ca746b7",
+                "platform": {}
+            },
+            "sha256:a90e6a27bfd326b2570b542cc62e1320b934e98db1ddf099893a01efa2231b00": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 172,
+                "digest": "sha256:a90e6a27bfd326b2570b542cc62e1320b934e98db1ddf099893a01efa2231b00",
+                "platform": {}
+            },
+            "sha256:b40161cd83fc5d470d6abe50e87aa288481b6b89137012881d74187cfbf9f502": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 382,
+                "digest": "sha256:b40161cd83fc5d470d6abe50e87aa288481b6b89137012881d74187cfbf9f502",
+                "platform": {}
+            },
+            "sha256:cb7c41a24e0519a2537188bb65af5347837eb80f1bb040f55be499105c23905d": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 147,
+                "digest": "sha256:cb7c41a24e0519a2537188bb65af5347837eb80f1bb040f55be499105c23905d",
+                "platform": {}
+            },
+            "sha256:d3c894b5b2b0fa857549aeb6cbc38b038b5b2828736be37b6d9fff0b886f12fd": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 112,
+                "digest": "sha256:d3c894b5b2b0fa857549aeb6cbc38b038b5b2828736be37b6d9fff0b886f12fd",
+                "platform": {}
+            },
+            "sha256:fc6336cdd8609663fb52435ee6b61da4ddd1b5b1025592652705200cd15287f3": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 83991,
+                "digest": "sha256:fc6336cdd8609663fb52435ee6b61da4ddd1b5b1025592652705200cd15287f3",
+                "platform": {}
+            },
+            "sha256:ff56006c6f1e2e98640d5693c0865f8cefc71ad6ec690e7e35c4f717db9dbb6d": {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 122093,
+                "digest": "sha256:ff56006c6f1e2e98640d5693c0865f8cefc71ad6ec690e7e35c4f717db9dbb6d",
+                "platform": {}
+            }
+        },
+        "Layers": [
+            "blobs/sha256/fc6336cdd8609663fb52435ee6b61da4ddd1b5b1025592652705200cd15287f3",
+            "blobs/sha256/960043b8858c3c30f1d79dcc49adb2804fd35c2510729e67685b298b2ca746b7",
+            "blobs/sha256/5c984a731132bc80679e3479bdd07f56860e2880f0242b7edb2f8788a8497589",
+            "blobs/sha256/d3c894b5b2b0fa857549aeb6cbc38b038b5b2828736be37b6d9fff0b886f12fd",
+            "blobs/sha256/b40161cd83fc5d470d6abe50e87aa288481b6b89137012881d74187cfbf9f502",
+            "blobs/sha256/a90e6a27bfd326b2570b542cc62e1320b934e98db1ddf099893a01efa2231b00",
+            "blobs/sha256/cb7c41a24e0519a2537188bb65af5347837eb80f1bb040f55be499105c23905d",
+            "blobs/sha256/55e48d707276ca428b96a28bf34a3819588fbf601d70ed25af324db8d1437ef4",
+            "blobs/sha256/2d970907bb8411aea1011e206c504ef0ae6295d5405e2653f66a13c42b31d907",
+            "blobs/sha256/ff56006c6f1e2e98640d5693c0865f8cefc71ad6ec690e7e35c4f717db9dbb6d",
+            "blobs/sha256/74a85ff6c36f30572d34bc44f9783d943c4f08305f7da3cec5b688fe6f5cfc87"
+        ],
+        "RepoTags": [
+            "yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/nginx:v1.4.0"
+        ]
+    }
+]

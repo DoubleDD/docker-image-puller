@@ -95,7 +95,30 @@ func CreateFile(filename string) (*os.File, error) {
 	}
 	return os.Create(filename)
 }
+func RecreateFile(filename string) error {
+	// 检查文件是否存在
+	if _, err := os.Stat(filename); err == nil {
+		// 文件存在，删除它
+		fmt.Printf("文件 %s 已存在，正在删除...\n", filename)
+		if err := os.Remove(filename); err != nil {
+			return fmt.Errorf("删除文件失败: %v", err)
+		}
+		fmt.Printf("文件 %s 已删除\n", filename)
+	} else if !os.IsNotExist(err) {
+		// 其他错误（不是"文件不存在"错误）
+		return fmt.Errorf("检查文件失败: %v", err)
+	}
 
+	// 创建新文件（确保父目录存在）
+	file, err := CreateFile(filename)
+	if err != nil {
+		return fmt.Errorf("创建文件失败: %v", err)
+	}
+	defer file.Close()
+
+	fmt.Printf("文件 %s 创建成功\n", filename)
+	return nil
+}
 func CheckFileAndDataMd5(filePath string, data []byte) bool {
 	fileMd5 := FileMd5(filePath)
 	dataMd5 := DataMd5(data)
@@ -111,6 +134,7 @@ func CheckDataMd5(data []byte, md5Hash string) bool {
 	// fmt.Println("校验md5", "\n预期值：", md5Hash, "\n计算值：", dataMd5)
 	return md5Hash == dataMd5
 }
+
 func CheckFileMd5(filePath, md5Hash string) bool {
 	if md5Hash == "" {
 		return false
@@ -175,6 +199,7 @@ func DataHash(data []byte, hashFunc func() hash.Hash) (string, time.Duration) {
 }
 
 func CreateFileWithData(fileName string, data []byte) error {
+	CreateFile(fileName)
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -190,12 +215,7 @@ func CreateFileWithData(fileName string, data []byte) error {
 }
 
 func AppendDataToFile(data []byte, fileName string) error {
-	err := MkParentDir(fileName)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}

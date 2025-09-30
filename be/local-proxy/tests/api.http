@@ -6,3 +6,7 @@ GET http://127.0.0.1:7151/proxy/api/docker/manifest?image=yunli-registry.cn-zhan
 
 ### 根据manifest内容下载blob
 GET http://127.0.0.1:7151/proxy/api/docker/blob/download?image=yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/yunli_ai/resource:data-agent-report-2.5.0.zhuabao&digest=kedong@yunlizhihui&size=kedong@123 HTTP/1.1
+
+
+### 下载合并镜像
+GET http://127.0.0.1:7151/proxy/api/docker/merge?image=yunli-registry.cn-zhangjiakou.cr.aliyuncs.com/pan-ecology/nginx:v1.4.0 HTTP/1.1

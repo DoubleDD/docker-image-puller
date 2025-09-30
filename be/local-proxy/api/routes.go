@@ -20,6 +20,7 @@ func SetupRouter() *gin.Engine {
 		proxy.GET("/status", handlers.Status)
 		proxy.GET("/api/docker/manifest", handlers.GetManifest)
 		proxy.GET("/api/docker/blob/download", handlers.ImageLayerBlobDownload)
+		proxy.GET("/api/docker/merge", handlers.MergeImageLayers)
 	}
 	return r
 }

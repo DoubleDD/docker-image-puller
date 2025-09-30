@@ -7,7 +7,7 @@ import (
 )
 
 // 新增：解析镜像地址的函数
-func ParseImageAddress(imageAddress string) (registry, repository, tag string, err error) {
+func ParseImageAddress(imageAddress string) (registry, namespace, repository, tag string, err error) {
 	cfg := config.Load()
 
 	// 移除可能存在的协议前缀
@@ -17,7 +17,7 @@ func ParseImageAddress(imageAddress string) (registry, repository, tag string, e
 	// 分离tag
 	parts := strings.Split(imageAddress, ":")
 	if len(parts) > 2 {
-		return "", "", "", fmt.Errorf("invalid image address format")
+		return "", "", "", "", fmt.Errorf("invalid image address format")
 	}
 
 	address := parts[0]
@@ -37,12 +37,13 @@ func ParseImageAddress(imageAddress string) (registry, repository, tag string, e
 		// 判断第一部分是否包含域名特征（包含'.'或':'）
 		if strings.Contains(addressParts[0], ".") || strings.Contains(addressParts[0], ":") {
 			registry = addressParts[0]
-			repository = strings.Join(addressParts[1:], "/")
+			namespace = addressParts[1]
+			repository = addressParts[2]
 		} else {
 			registry = cfg.DefaultPullRegistry
 			repository = imageAddress
 		}
 	}
 
-	return registry, repository, tag, nil
+	return registry, namespace, repository, tag, nil
 }
